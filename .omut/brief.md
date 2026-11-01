@@ -11,15 +11,15 @@ Keep a pack of projects so that the human and any agent (Claude Code, Codex, oth
 A Go CLI without dependencies: `cmd/omut` (commands), `internal/meta` (parsing meta files), `internal/check` (rules), `internal/scaffold` (init/start/zero/kill), `templates/` (embedded, usable by hand). The intent is `docs/spec-v0.md`, the neighbours are `docs/research/competitors.md`.
 
 ## Where it lives
-GitHub: github.com/metravod/omut (public, 2026-11-01). Nothing runs anywhere.
+GitHub: github.com/metravod/omut (public, 2026-11-01). Releases via goreleaser, run locally for now; the Homebrew cask goes to github.com/metravod/homebrew-tap (`brew install metravod/tap/omut`). Nothing runs anywhere.
 
 ## Now
 v0: all 7 commands and the check rules from the spec. Templates, CLI messages and docs are in English.
 **Verified:** `go test ./...` (14 tests: meta parsing, init/start/zero/freeze/kill/check end to end); `check` on a pack of symlinked real projects, 0.03 s.
-**Not verified:** Codex with AGENTS.md above the git root; a handoff to Codex on real meta; check on a large pack; goreleaser is not set up.
+**Not verified:** Codex with AGENTS.md above the git root; a handoff to Codex on real meta; check on a large pack; releases from CI (need a tap token).
 
 ## Next
 1. Live with a real pack of active projects
 2. Handoff: open a project in Codex, ask "what is this and what's next"
 3. Check Codex and AGENTS.md above the git root
-4. Distribution: goreleaser + a Homebrew tap
+4. Releases from CI: a fine-grained token for the tap as a repo secret

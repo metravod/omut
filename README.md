@@ -49,8 +49,16 @@ The templates are plain markdown in [`templates/`](templates/), so a pack can be
 ## Install
 
 ```sh
+brew install metravod/tap/omut
+```
+
+Or with Go:
+
+```sh
 go install github.com/metravod/omut/cmd/omut@latest
 ```
+
+Binaries for macOS, Linux and Windows are on the [releases page](https://github.com/metravod/omut/releases).
 
 Or build from source:
 

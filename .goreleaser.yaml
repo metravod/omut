@@ -1,0 +1,60 @@
+version: 2
+
+project_name: omut
+
+builds:
+  - main: ./cmd/omut
+    binary: omut
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+homebrew_casks:
+  - repository:
+      owner: metravod
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: https://github.com/metravod/omut
+    description: "Meta for a pack of projects that any agent can read and check"
+    license: MIT
+    commit_author:
+      name: metravod
+      email: "{{ .Env.HOMEBREW_TAP_EMAIL }}"
+    # The binaries are not notarized: drop the quarantine flag so macOS
+    # runs them.
+    hooks:
+      post:
+        install_steps: |
+          on_macos do
+            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/omut"]
+          end
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
