@@ -1,1 +1,2 @@
+- 2026-11-01 · claude-code/opus-5.5 · v0.1.0 released with goreleaser (run locally); cask in metravod/homebrew-tap; verified: `brew install metravod/tap/omut`, `omut version` → .goreleaser.yaml
 - 2026-11-01 · claude-code/opus-5.5 · v0 published: spec, competitor study (read from source), Go CLI with all 7 commands, English templates; verified: `go test ./...`, check on a pack of real projects → .omut/threads/spec-v0.md
