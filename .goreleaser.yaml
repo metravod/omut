@@ -40,9 +40,6 @@ homebrew_casks:
     homepage: https://github.com/metravod/omut
     description: "Meta for a pack of projects that any agent can read and check"
     license: MIT
-    commit_author:
-      name: metravod
-      email: "{{ .Env.HOMEBREW_TAP_EMAIL }}"
     # The binaries are not notarized: drop the quarantine flag so macOS
     # runs them.
     hooks:
