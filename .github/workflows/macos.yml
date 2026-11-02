@@ -1,0 +1,20 @@
+name: macos
+
+# macOS behaves differently where omut cares: temp dirs sit behind the
+# /var -> /private/var symlink, and the file system ignores case. Run
+# before every release (release.yml calls this) and by hand.
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - run: go test ./...

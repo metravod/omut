@@ -1,5 +1,9 @@
 name: ci
 
+# Every push and pull request: Linux only. macOS runs before a release and
+# by hand (macos.yml): GitHub's macOS arm64 runners are short on capacity,
+# and a job that never gets a runner is cancelled after 15 minutes, which
+# turned main red with no fault in the code (2026-11-02).
 on:
   push:
     branches: [main]
@@ -7,10 +11,7 @@ on:
 
 jobs:
   test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
