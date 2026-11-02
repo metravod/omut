@@ -16,10 +16,10 @@ GitHub: github.com/metravod/omut (public, 2026-11-01). Releases via goreleaser o
 ## Now
 v0: all 7 commands and the check rules from the spec. Templates, CLI messages and docs are in English. Since 2026-11-02 (unreleased): every project carries its rules in `.omut/README.md`, and a single repository works without a pack (D12).
 **Verified:** `go test ./...` (19 tests: meta parsing, init/start/zero/freeze/kill/check end to end, `stale-brief` through a symlink and with git, `pointer` via `CLAUDE.local.md`, a single project without a pack, README in pack projects); `zero` on `~/oss_projects` root and omut retires `conventions.md` and lays down the README; `check` on the pack: 0.6 s (two git calls per project).
-**Not verified:** Codex with AGENTS.md above the git root; a handoff to Codex on real meta, now also without the pack (a clone with only `.omut/README.md`); check on a large pack; releases from CI (need a tap token). The other 5 projects of the pack have no README yet (`omut zero <name>`).
+**Not verified:** Codex with AGENTS.md above the git root; a handoff to Codex on real meta, now also without the pack (a clone with only `.omut/README.md`); check on a large pack; releases from CI (need a tap token).
 
 ## Next
-1. Live with a real pack of active projects; `omut zero` the other 5 projects
+1. Live with a real pack of active projects; commit the pack's meta once it is cleaned of internal details (pack D3)
 2. Codex: a handoff on real meta ("what is this and what's next") and AGENTS.md above the git root
 3. Session hooks: check at start, log/"Now" at the end, for every agent, not only Claude Code → threads/review-2026-11-01.md
 4. Triage findings 7–13 from the first real pack (drift migration, `start --local`, ADR registry, unknown dates, gitignored files in `kill`) → threads/review-2026-11-01.md
