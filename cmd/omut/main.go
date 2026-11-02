@@ -28,7 +28,8 @@ Commands:
   freeze [project]                     status: frozen
   thaw [project]                       status: active
   kill <project> --yes --reason "..."  remove a project, write a tombstone (--force: even with unsaved work)
-  check [project] [--json]             check the shape and freshness of the meta
+  check [project] [--json] [--fail-on warn]
+                                       check the shape and freshness of the meta
   zero [project]                       repair the scaffold, update the tool files
   hook start|commit                    for agents' and git's hooks: session context, pre-commit reminder
   version
@@ -274,9 +275,13 @@ func cmdKill(args []string, out io.Writer) error {
 func cmdCheck(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("check", flag.ContinueOnError)
 	asJSON := fs.Bool("json", false, "output JSON")
+	failOn := fs.String("fail-on", "error", "the lowest level that makes the exit code non-zero: error or warn")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
+	}
+	if *failOn != "error" && *failOn != "warn" {
+		return fmt.Errorf("--fail-on %q: error or warn", *failOn)
 	}
 	var findings []check.Finding
 	p, err := findPack()
@@ -322,7 +327,7 @@ func cmdCheck(args []string, out io.Writer) error {
 	} else {
 		printFindings(out, findings)
 	}
-	if check.HasErrors(findings) {
+	if check.HasErrors(findings) || (*failOn == "warn" && check.HasWarnings(findings)) {
 		return exitCode(1)
 	}
 	return nil

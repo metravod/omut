@@ -507,3 +507,47 @@ func TestPackProjectsGetTheirRules(t *testing.T) {
 		t.Errorf("after zero: %+v", fs)
 	}
 }
+
+func TestCheckFailOnWarn(t *testing.T) {
+	proj := filepath.Join(t.TempDir(), "hn")
+	today := time.Now().Format("2006-01-02")
+	standalone(t, proj, today)
+	var exit exitCode
+	if _, err := omut(t, proj, "check", "--fail-on", "warn"); err != nil {
+		t.Errorf("clean meta: %v", err)
+	}
+	write(t, filepath.Join(proj, ".omut/brief.md"), fill(today, "2020-01-01", ""))
+	if _, err := omut(t, proj, "check"); err != nil {
+		t.Errorf("a warning must not fail by default: %v", err)
+	}
+	if _, err := omut(t, proj, "check", "--fail-on", "warn"); !errors.As(err, &exit) {
+		t.Errorf("--fail-on warn did not fail on unverified: %v", err)
+	}
+	if _, err := omut(t, proj, "check", "--fail-on", "info"); err == nil {
+		t.Error("--fail-on info must be refused")
+	}
+}
+
+// A commit made in the evening west of UTC is already "tomorrow" in UTC,
+// where CI runs. The brief's date was written in the committer's zone, so
+// that is the zone to compare in.
+func TestStaleBriefInCommitterTimeZone(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("no git")
+	}
+	local := time.Local
+	time.Local = time.UTC
+	t.Cleanup(func() { time.Local = local })
+
+	repo := filepath.Join(t.TempDir(), "hn")
+	standalone(t, repo, "2026-11-02")
+	git(t, repo, "init", "-q")
+	git(t, repo, "add", ".")
+	t.Setenv("GIT_COMMITTER_DATE", "2026-11-02T18:00:00-08:00") // 02:00 UTC on 11-03
+	git(t, repo, "commit", "-qm", "evening work")
+	clone := filepath.Join(t.TempDir(), "hn")
+	git(t, filepath.Dir(clone), "clone", "-q", repo, clone)
+	if fs := findings(t, clone); has(fs, "hn", "stale-brief") {
+		t.Errorf("stale-brief from the time zone, not from the work: %+v", fs)
+	}
+}

@@ -34,13 +34,18 @@ exec omut hook commit
 
 With a hook manager, call `omut hook commit` from it. Add `--strict` where agents do most of the commits; `git commit --no-verify` is the way around it.
 
-## CI
+## CI and the badge
 
-`omut check` exits non-zero on shape errors. A GitHub Actions job, `.github/workflows/omut.yml`:
+`omut check` exits non-zero on shape errors; with `--fail-on warn` on warnings too: a stale brief, a brief not checked against reality for 30 days, an unfilled template, a missing pointer. That is the difference between "the meta is well-formed" and "the meta is fresh", and it is what the badge shows. A GitHub Actions workflow, `.github/workflows/omut.yml`:
 
 ```yaml
 name: omut
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"   # what goes stale with time alone, such as `verified`
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -50,7 +55,21 @@ jobs:
         with:
           go-version: stable
       - run: go install github.com/metravod/omut/cmd/omut@latest
-      - run: omut check
+      - run: omut check --fail-on warn
+```
+
+`--fail-on` needs omut 0.2.0 or later. Drop it to fail on shape errors only.
+
+The badge, in the project's `README.md` (put your owner and repository in the URL), links to `.omut/`, where GitHub shows `.omut/README.md`: what the meta is and how to read it.
+
+```markdown
+[![omut](https://github.com/OWNER/REPO/actions/workflows/omut.yml/badge.svg?branch=main)](.omut/)
+```
+
+Without CI, a static badge says only that the meta is there:
+
+```markdown
+[![omut](https://img.shields.io/badge/meta-omut-blue)](.omut/)
 ```
 
 ## Claude Code

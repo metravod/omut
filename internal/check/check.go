@@ -58,6 +58,11 @@ func (o Options) today() time.Time {
 	return time.Date(y, m, d, 0, 0, 0, 0, time.Local)
 }
 
+// HasWarnings reports whether any finding is a warning.
+func HasWarnings(fs []Finding) bool {
+	return slices.ContainsFunc(fs, func(f Finding) bool { return f.Level == Warn })
+}
+
 // HasErrors reports whether any finding is a form error.
 func HasErrors(fs []Finding) bool {
 	return slices.ContainsFunc(fs, func(f Finding) bool { return f.Level == Error })
@@ -301,11 +306,12 @@ func isRepo(dir string) bool {
 }
 
 // lastCommit is the date of the last commit that touched anything outside
-// .omut/; zero in a repository without commits.
+// .omut/; zero in a repository without commits. It keeps the committer's
+// own time zone: `updated` was written in it, and CI runs in UTC.
 func lastCommit(dir string) time.Time {
 	out, _ := exec.Command("git", "-C", dir, "log", "-1", "--format=%cI", "--", ".", ":(exclude)"+pack.MetaDir).Output()
 	if t, err := time.Parse(time.RFC3339, strings.TrimSpace(string(out))); err == nil {
-		return t.Local()
+		return t
 	}
 	return time.Time{}
 }

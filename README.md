@@ -1,5 +1,7 @@
 # omut
 
+[![omut](https://github.com/metravod/omut/actions/workflows/omut.yml/badge.svg?branch=main)](.omut/) [![ci](https://github.com/metravod/omut/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/metravod/omut/actions/workflows/ci.yml)
+
 A pack of projects that any agent can tell the truth about. Short meta in every project, carrying its own rules, and a check that what is written still matches reality. Works for a single repository too.
 
 > *Omut pamyati* is the Russian name of Dumbledore's Pensieve: you dip into someone's memories and see how it really was.
@@ -74,10 +76,10 @@ go test ./...
 ## Docs
 
 - [Specification v0](docs/spec-v0.md)
-- [Hooks for git, CI, Claude Code, Codex, Cursor](docs/hooks.md)
+- [Hooks for git, CI, Claude Code, Codex, Cursor, and the badge](docs/hooks.md)
 - [Competitors and neighbours](docs/research/competitors.md)
 
-This repo keeps its own meta by its own spec: see [`.omut/`](.omut/).
+This repo keeps its own meta by its own spec: see [`.omut/`](.omut/). The `omut` badge above is that meta's check in CI: green means fresh, not only well-formed.
 
 ## Credits
 
