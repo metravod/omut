@@ -19,12 +19,12 @@ type Mention struct {
 	Text string
 }
 
-// Unsaved lists what would be lost with a git project: uncommitted
-// changes and commits that are on no remote. A project without git has
-// nothing to compare against and returns nil.
+// Unsaved lists what would be lost: uncommitted changes and commits that
+// are on no remote. A project without git has no copy anywhere, so all of
+// it would be lost.
 func Unsaved(dir string) []string {
 	if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
-		return nil
+		return []string{"no git: the files exist only here"}
 	}
 	git := func(args ...string) (string, error) {
 		out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).Output()

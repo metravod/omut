@@ -282,6 +282,9 @@ func TestKillGuardsTombstoneAndGhosts(t *testing.T) {
 	write(t, filepath.Join(root, "hn/.omut/brief.md"), fill(today, today, ""))
 	write(t, filepath.Join(root, "hn/docs/notes.md"), "n\n")
 	write(t, filepath.Join(root, "site/.omut/brief.md"), strings.Replace(fill(today, today, ""), "- turn it off", "- take the data from hn", 1))
+	if _, err := omut(t, root, "kill", "hn", "--yes", "--reason", "x"); err == nil || !strings.Contains(err.Error(), "no git") {
+		t.Errorf("kill of a project without git: %v", err)
+	}
 	git(t, filepath.Join(root, "hn"), "init", "-q")
 
 	if _, err := omut(t, root, "kill", "hn", "--reason", "x"); err == nil || !strings.Contains(err.Error(), "--yes") {
@@ -368,36 +371,23 @@ func TestStaleBriefWithGit(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("no git")
 	}
-	for k, v := range map[string]string{
-		"GIT_CONFIG_GLOBAL": os.DevNull, "GIT_CONFIG_NOSYSTEM": "1",
-		"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
-	} {
-		t.Setenv(k, v)
-	}
-	git := func(dir string, args ...string) {
-		t.Helper()
-		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
 	src := filepath.Join(t.TempDir(), "hn")
 	standalone(t, src, "2021-01-01")
-	git(src, "init", "-q")
-	git(src, "add", ".")
+	git(t, src, "init", "-q")
+	git(t, src, "add", ".")
 	t.Setenv("GIT_COMMITTER_DATE", "2020-06-01T12:00:00Z")
-	git(src, "commit", "-q", "-m", "old work")
+	git(t, src, "commit", "-q", "-m", "old work")
 	os.Unsetenv("GIT_COMMITTER_DATE")
 
 	// A fresh clone: every mtime is today, but nothing changed since 2020.
 	clone := filepath.Join(t.TempDir(), "hn")
-	git(filepath.Dir(clone), "clone", "-q", src, clone)
+	git(t, filepath.Dir(clone), "clone", "-q", src, clone)
 	if fs := findings(t, clone); has(fs, "hn", "stale-brief") {
 		t.Errorf("stale-brief on a fresh clone: %+v", fs)
 	}
 	// A commit that touches only the meta is not a change of the project.
 	write(t, filepath.Join(clone, ".omut/log.md"), "- 2021-01-01 · t/t · meta\n")
-	git(clone, "commit", "-q", "-am", "meta")
+	git(t, clone, "commit", "-q", "-am", "meta")
 	if fs := findings(t, clone); has(fs, "hn", "stale-brief") {
 		t.Errorf("stale-brief after a meta-only commit: %+v", fs)
 	}
@@ -406,7 +396,7 @@ func TestStaleBriefWithGit(t *testing.T) {
 	if fs := findings(t, clone); !has(fs, "hn", "stale-brief") {
 		t.Errorf("stale-brief not reported for an uncommitted edit: %+v", fs)
 	}
-	git(clone, "checkout", "-q", "--", "docs/notes.md")
+	git(t, clone, "checkout", "-q", "--", "docs/notes.md")
 	write(t, filepath.Join(clone, "new.py"), "x\n")
 	if fs := findings(t, clone); !has(fs, "hn", "stale-brief") {
 		t.Errorf("stale-brief not reported for an untracked file: %+v", fs)
@@ -414,8 +404,8 @@ func TestStaleBriefWithGit(t *testing.T) {
 	os.Remove(filepath.Join(clone, "new.py"))
 	// A commit outside the meta is a change.
 	write(t, filepath.Join(clone, "main.py"), "print(1)\n")
-	git(clone, "add", "main.py")
-	git(clone, "commit", "-q", "-m", "work")
+	git(t, clone, "add", "main.py")
+	git(t, clone, "commit", "-q", "-m", "work")
 	if err := os.Chtimes(filepath.Join(clone, "main.py"), time.Unix(0, 0), time.Unix(0, 0)); err != nil {
 		t.Fatal(err)
 	}

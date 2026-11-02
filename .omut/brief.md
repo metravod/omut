@@ -21,8 +21,7 @@ v0: all 7 commands and the check rules from the spec. Templates, CLI messages an
 ## Next
 1. Live with a real pack of active projects
 2. Codex: a handoff on real meta ("what is this and what's next") and AGENTS.md above the git root
-3. Hook recipes, Claude Code first: check at start, log/"Now" at stop → threads/review-2026-11-01.md
-4. `kill` without git: require `--force` or move to the trash → threads/review-2026-11-01.md
-5. Triage findings 7–12 from the first real pack (drift migration, `start --local`, ADR registry, unknown dates) → threads/review-2026-11-01.md
-6. Machine-checkable "Where it lives" → D11
-7. Releases from CI: set the HOMEBREW_TAP_TOKEN secret, then tag
+3. Session hooks: check at start, log/"Now" at the end, for every agent, not only Claude Code → threads/review-2026-11-01.md
+4. Triage findings 7–13 from the first real pack (drift migration, `start --local`, ADR registry, unknown dates, gitignored files in `kill`) → threads/review-2026-11-01.md
+5. Machine-checkable "Where it lives" → D11
+6. Releases from CI: set the HOMEBREW_TAP_TOKEN secret, then tag

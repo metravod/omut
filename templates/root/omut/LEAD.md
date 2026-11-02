@@ -29,5 +29,5 @@ All are non-interactive. The CLI never writes meta: that is your job.
 | `omut check [project] [--json]` | Report on the shape and freshness of the meta. Exits non-zero on shape errors. |
 | `omut start <name>` | A new project, or adopt an existing directory: `.omut/` templates, a block in `AGENTS.md`. |
 | `omut freeze <name>` / `thaw <name>` | `status: frozen` / `active` in the brief. |
-| `omut kill <name> --yes --reason "..."` | Remove a project, write a tombstone, print the mentions. Without `--force` it refuses when there is uncommitted or unpushed work. |
+| `omut kill <name> --yes --reason "..."` | Remove a project, write a tombstone, print the mentions. Without `--force` it refuses when there is uncommitted or unpushed work, or no git at all. |
 | `omut zero [project]` | Repair the scaffold: update the tool files, create missing templates, fix the block. Never touches meta. |
