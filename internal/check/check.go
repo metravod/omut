@@ -106,7 +106,7 @@ func Standalone(dir string, opt Options) []Finding {
 }
 
 func checkRoot(r *report, p *pack.Pack) {
-	for _, file := range []string{pack.LeadFile, pack.Conventions} {
+	for _, file := range []string{pack.LeadFile} {
 		path := p.Lead(file)
 		b, err := os.ReadFile(path)
 		if err != nil {
@@ -176,6 +176,7 @@ func project(base, dir, name string, opt Options, dead []string) []Finding {
 			checkRefs(r, d, dir)
 		}
 	}
+	checkReadme(r, lead, name)
 	checkPointer(r, dir)
 	if len(dead) > 0 {
 		checkGhosts(r, lead, name, dead)
@@ -484,9 +485,23 @@ func leadsToAgents(path string) bool {
 	return err == nil && (strings.Contains(string(c), "@AGENTS.md") || strings.Contains(string(c), pack.BlockStart))
 }
 
+// checkReadme looks at the project's copy of the rules: an agent that gets
+// the project without its pack learns the format from it.
+func checkReadme(r *report, lead, name string) {
+	path := filepath.Join(lead, pack.Readme)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		r.add("pointer", Warn, path, 0, "no .omut/README.md, an agent without the pack will not know the rules: omut zero %s creates it", name)
+		return
+	}
+	if tmpl, err := templates.FS.ReadFile("project/omut/" + pack.Readme); err == nil && string(tmpl) != string(b) {
+		r.add("outdated", Info, path, 0, "differs from this version's template: omut zero %s updates it", name)
+	}
+}
+
 func checkGhosts(r *report, lead, self string, dead []string) {
 	filepath.WalkDir(lead, func(path string, e fs.DirEntry, err error) error {
-		if err != nil || e.IsDir() || !strings.HasSuffix(path, ".md") || e.Name() == pack.Log || strings.Contains(path, "log-archive") {
+		if err != nil || e.IsDir() || !strings.HasSuffix(path, ".md") || e.Name() == pack.Log || path == filepath.Join(lead, pack.Readme) || strings.Contains(path, "log-archive") {
 			return nil
 		}
 		d, err := meta.Read(path)

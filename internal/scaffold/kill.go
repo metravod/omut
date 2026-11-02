@@ -103,7 +103,7 @@ func findMentions(p *pack.Pack, name string) []Mention {
 			if err != nil || e.IsDir() || !strings.HasSuffix(path, ".md") {
 				return nil
 			}
-			if e.Name() == pack.Log || e.Name() == pack.Graveyard || strings.Contains(path, "log-archive") {
+			if e.Name() == pack.Log || e.Name() == pack.Graveyard || path == filepath.Join(root, pack.Readme) || strings.Contains(path, "log-archive") {
 				return nil
 			}
 			d, err := meta.Read(path)

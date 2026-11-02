@@ -1,6 +1,6 @@
 # omut
 
-A pack of projects that any agent can tell the truth about. Short meta in every project, rules in the root, and a check that what is written still matches reality.
+A pack of projects that any agent can tell the truth about. Short meta in every project, carrying its own rules, and a check that what is written still matches reality. Works for a single repository too.
 
 > *Omut pamyati* is the Russian name of Dumbledore's Pensieve: you dip into someone's memories and see how it really was.
 
@@ -15,8 +15,8 @@ omut keeps a few plain markdown files next to each project: a brief (why, what i
 ## How it looks
 
 ```sh
-cd ~/projects && omut init      # the pack root: AGENTS.md, .omut/LEAD.md, .omut/conventions.md
-omut start hn-parser            # adopt a directory: .omut/ templates, a block in AGENTS.md
+cd ~/projects && omut init      # the pack root: AGENTS.md, .omut/LEAD.md, pack meta
+omut start hn-parser            # adopt a directory: .omut/ templates and rules, a block in AGENTS.md
 omut check                      # what is stale, what is unfilled, which decisions wait
 ```
 
@@ -29,6 +29,7 @@ Agents do the rest: Claude Code, Codex, or anything else that reads `AGENTS.md`.
   hn-parser/
     AGENTS.md
     .omut/
+      README.md          # what this is, how to read it, the rules (the tool's)
       brief.md           # why · what it is · where it lives · now · next
       decisions.md       # - D3 [open] Keep collecting after the week? → threads/hn-future.md
       threads/           # unfinished work, with the next step
@@ -38,11 +39,13 @@ Agents do the rest: Claude Code, Codex, or anything else that reads `AGENTS.md`.
 | Command | What it does |
 |---|---|
 | `init [dir]` | create a pack |
-| `start <project>` | a new project, or adopt an existing directory |
-| `freeze` / `thaw <project>` | freeze / unfreeze |
+| `start [project]` | a new project, or adopt an existing directory |
+| `freeze` / `thaw [project]` | freeze / unfreeze |
 | `kill <project> --yes --reason "..."` | remove, write a tombstone, list the mentions |
 | `check [project] [--json]` | the report; non-zero exit on shape errors |
 | `zero [project]` | repair the scaffold, update the tool files |
+
+No pack? In a single repository `omut start` gives it the same meta, rules included, and `check`, `zero`, `freeze` and `thaw` work on that directory.
 
 The templates are plain markdown in [`templates/`](templates/), so a pack can be set up by hand too.
 

@@ -21,6 +21,7 @@ import (
 type Result struct {
 	Created []string
 	Updated []string
+	Removed []string
 	Notes   []string
 }
 
@@ -37,7 +38,15 @@ func (o Options) date() string {
 }
 
 // toolFiles belong to the tool: zero rewrites them to the current template.
-var toolFiles = []string{pack.LeadFile, pack.Conventions}
+var toolFiles = []string{pack.LeadFile}
+
+// retiredFiles were tool files of the root in earlier versions; zero
+// removes them when they still carry the tool-file mark. conventions.md
+// moved into every project as .omut/README.md, so a project read without
+// its pack still carries its rules.
+var retiredFiles = []string{"conventions.md"}
+
+const toolMark = "<!-- Tool file:"
 
 // rootMeta and projectMeta belong to agents: created when missing, never
 // rewritten.
@@ -69,6 +78,9 @@ func zeroRoot(dir string, opt Options) (*Result, error) {
 	for _, file := range rootMeta {
 		w.meta("root/omut/"+file, filepath.Join(pack.MetaDir, file))
 	}
+	for _, file := range retiredFiles {
+		w.retire(filepath.Join(pack.MetaDir, file))
+	}
 	w.block("root/block.md")
 	w.claudeLink()
 	return res, w.err
@@ -80,7 +92,13 @@ func Start(p *pack.Pack, name string, opt Options) (*Result, error) {
 	if err := pack.ValidName(name); err != nil {
 		return nil, err
 	}
-	dir := p.Dir(name)
+	return StartAt(p.Dir(name), opt)
+}
+
+// StartAt does what Start does for any directory, inside a pack or not: a
+// single repository carries its meta and rules without a pack around it.
+func StartAt(dir string, opt Options) (*Result, error) {
+	name := filepath.Base(dir)
 	if d, err := meta.Read(filepath.Join(dir, pack.MetaDir, pack.Brief)); err == nil && d.Front["status"] == "frozen" {
 		return nil, fmt.Errorf("%s is frozen: omut thaw %s", name, name)
 	}
@@ -107,9 +125,13 @@ func ZeroProject(p *pack.Pack, name string, opt Options) (*Result, error) {
 	return zeroProject(dir, opt)
 }
 
+// ZeroAt repairs the scaffold of a project outside any pack.
+func ZeroAt(dir string, opt Options) (*Result, error) { return zeroProject(dir, opt) }
+
 func zeroProject(dir string, opt Options) (*Result, error) {
 	res := &Result{}
 	w := writer{dir: dir, res: res, opt: opt}
+	w.tool("project/omut/"+pack.Readme, filepath.Join(pack.MetaDir, pack.Readme))
 	for _, file := range projectMeta {
 		w.meta("project/omut/"+file, filepath.Join(pack.MetaDir, file))
 	}
@@ -168,6 +190,19 @@ func (w *writer) tool(tmpl, rel string) {
 		w.res.Updated = append(w.res.Updated, rel)
 	} else {
 		w.res.Created = append(w.res.Created, rel)
+	}
+}
+
+func (w *writer) retire(rel string) {
+	if w.err != nil {
+		return
+	}
+	b, err := os.ReadFile(w.path(rel))
+	if err != nil || !strings.HasPrefix(string(b), toolMark) {
+		return
+	}
+	if w.err = os.Remove(w.path(rel)); w.err == nil {
+		w.res.Removed = append(w.res.Removed, rel)
 	}
 }
 

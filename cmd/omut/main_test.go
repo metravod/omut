@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/metravod/omut/internal/check"
+	"github.com/metravod/omut/templates"
 )
 
 // omut runs one command in dir and returns its output and error.
@@ -109,7 +110,7 @@ func fill(updated, verified, lives string) string {
 func TestInitIsCleanAndRefusesTwice(t *testing.T) {
 	root := t.TempDir()
 	must(t, root, "init", "--by", "test")
-	for _, f := range []string{"AGENTS.md", ".omut/LEAD.md", ".omut/conventions.md", ".omut/brief.md", ".omut/decisions.md", ".omut/graveyard.md"} {
+	for _, f := range []string{"AGENTS.md", ".omut/LEAD.md", ".omut/brief.md", ".omut/decisions.md", ".omut/graveyard.md"} {
 		if _, err := os.Stat(filepath.Join(root, f)); err != nil {
 			t.Errorf("init did not create %s", f)
 		}
@@ -239,14 +240,17 @@ func TestZeroRestoresToolFilesAndKeepsMeta(t *testing.T) {
 	must(t, root, "init")
 	write(t, filepath.Join(root, ".omut/LEAD.md"), "broken\n")
 	write(t, filepath.Join(root, ".omut/brief.md"), "---\nupdated: 2026-10-31\nby: me\nignore: []\n---\n## Focus\nmine\n")
-	os.Remove(filepath.Join(root, ".omut/conventions.md"))
+	os.Remove(filepath.Join(root, ".omut/graveyard.md"))
+	write(t, filepath.Join(root, ".omut/conventions.md"), "<!-- Tool file: an old version -->\n")
 	write(t, filepath.Join(root, "AGENTS.md"), "# My pack\n\n<!-- omut:start -->\nold block\n<!-- omut:end -->\n\ntail\n")
 
 	fs := findings(t, root)
 	if !has(fs, "", "outdated") || !has(fs, "", "scaffold") {
 		t.Errorf("before zero: %+v", fs)
 	}
-	must(t, root, "zero")
+	if out := must(t, root, "zero"); !strings.Contains(out, "removed  .omut/conventions.md") {
+		t.Errorf("zero did not retire conventions.md: %q", out)
+	}
 	if strings.Contains(read(t, filepath.Join(root, ".omut/LEAD.md")), "broken") {
 		t.Error("zero did not restore LEAD.md")
 	}
@@ -325,6 +329,7 @@ func TestStandaloneProject(t *testing.T) {
 	write(t, filepath.Join(proj, ".omut/log.md"), "")
 	write(t, filepath.Join(proj, "docs/notes.md"), "n\n")
 	write(t, filepath.Join(proj, "AGENTS.md"), "<!-- omut:start -->\nx\n<!-- omut:end -->\n")
+	writeReadme(t, proj)
 	if fs := findings(t, proj); len(fs) != 0 {
 		t.Errorf("standalone project: %+v", fs)
 	}
@@ -340,6 +345,16 @@ func standalone(t *testing.T, dir, updated string) {
 	write(t, filepath.Join(dir, ".omut/log.md"), "")
 	write(t, filepath.Join(dir, "docs/notes.md"), "n\n")
 	write(t, filepath.Join(dir, "AGENTS.md"), "<!-- omut:start -->\nx\n<!-- omut:end -->\n")
+	writeReadme(t, dir)
+}
+
+func writeReadme(t *testing.T, dir string) {
+	t.Helper()
+	b, err := templates.FS.ReadFile("project/omut/README.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	write(t, filepath.Join(dir, ".omut/README.md"), string(b))
 }
 
 func TestStaleBriefInsideSymlinkedProject(t *testing.T) {
@@ -424,5 +439,71 @@ func TestPointerThroughClaudeLocal(t *testing.T) {
 	write(t, filepath.Join(proj, "CLAUDE.local.md"), "@AGENTS.md\n")
 	if fs := findings(t, proj); has(fs, "hn", "pointer") {
 		t.Errorf("pointer reported although CLAUDE.local.md has @AGENTS.md: %+v", fs)
+	}
+}
+
+func TestSingleProjectWithoutPack(t *testing.T) {
+	repo := filepath.Join(t.TempDir(), "repo")
+	write(t, filepath.Join(repo, "main.go"), "package main\n")
+
+	out := must(t, repo, "start", "--by", "codex/gpt-5")
+	if !strings.Contains(out, "No pack around") {
+		t.Errorf("start outside a pack: %q", out)
+	}
+	readme := read(t, filepath.Join(repo, ".omut/README.md"))
+	for _, want := range []string{"## Reading it", "## Keeping it", "### Adopting a project"} {
+		if !strings.Contains(readme, want) {
+			t.Errorf(".omut/README.md has no %q", want)
+		}
+	}
+	agents := read(t, filepath.Join(repo, "AGENTS.md"))
+	if !strings.Contains(agents, "Full rules: `.omut/README.md`") || strings.Contains(agents, "../.omut") {
+		t.Errorf("the block points outside the project:\n%s", agents)
+	}
+	if target, err := os.Readlink(filepath.Join(repo, "CLAUDE.md")); err != nil || target != "AGENTS.md" {
+		t.Errorf("CLAUDE.md → %q, %v", target, err)
+	}
+	fs := findings(t, repo)
+	if check.HasErrors(fs) || has(fs, "repo", "pointer") || !has(fs, "repo", "unfilled") {
+		t.Errorf("fresh single project: %+v", fs)
+	}
+
+	write(t, filepath.Join(repo, ".omut/README.md"), "<!-- Tool file -->\nold\n")
+	if fs := findings(t, repo); !has(fs, "repo", "outdated") {
+		t.Errorf("outdated README not reported: %+v", fs)
+	}
+	must(t, repo, "zero")
+	if read(t, filepath.Join(repo, ".omut/README.md")) != readme {
+		t.Error("zero did not restore .omut/README.md")
+	}
+
+	must(t, repo, "freeze")
+	if !strings.Contains(read(t, filepath.Join(repo, ".omut/brief.md")), "status: frozen") {
+		t.Error("freeze outside a pack did not set frozen")
+	}
+	must(t, repo, "thaw")
+	// A path works as well as the current directory.
+	if out := must(t, filepath.Dir(repo), "start", "repo"); !strings.Contains(out, "has its meta already") {
+		t.Errorf("second start: %q", out)
+	}
+	if _, err := omut(t, t.TempDir(), "zero"); err == nil || !strings.Contains(err.Error(), "omut start") {
+		t.Errorf("zero in a directory without meta: %v", err)
+	}
+}
+
+func TestPackProjectsGetTheirRules(t *testing.T) {
+	root := t.TempDir()
+	must(t, root, "init")
+	must(t, root, "start", "hn")
+	if _, err := os.Stat(filepath.Join(root, "hn/.omut/README.md")); err != nil {
+		t.Fatal("start in a pack did not lay down .omut/README.md")
+	}
+	os.Remove(filepath.Join(root, "hn/.omut/README.md"))
+	if fs := findings(t, root, "hn"); !has(fs, "hn", "pointer") {
+		t.Errorf("missing README not reported: %+v", fs)
+	}
+	must(t, root, "zero", "hn")
+	if fs := findings(t, root, "hn"); has(fs, "hn", "pointer") || has(fs, "hn", "outdated") {
+		t.Errorf("after zero: %+v", fs)
 	}
 }

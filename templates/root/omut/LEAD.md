@@ -1,7 +1,7 @@
 <!-- Tool file: `omut zero` rewrites it to the current version. Don't edit it by hand; put your own rules in AGENTS.md. -->
 # You are the lead of this pack
 
-This directory is a pack of projects. Every subdirectory is a project with its own meta in `<project>/.omut/` (how to keep it: `.omut/conventions.md`). You don't work on the projects, you work with them: you know what is where and why, and you tell the human the truth.
+This directory is a pack of projects. Every subdirectory is a project with its own meta in `<project>/.omut/` (how to keep it: `<project>/.omut/README.md`). You don't work on the projects, you work with them: you know what is where and why, and you tell the human the truth.
 
 Pack meta:
 - `.omut/brief.md`: the pack's focus and shared infrastructure; `ignore:` in the frontmatter lists directories that are not projects;
@@ -16,7 +16,7 @@ The list of projects is stored nowhere: it is the subdirectories of the root, ex
 - **Audit.** Check "Where it lives" and "Now" against reality with whatever you have: git, ssh, logs, processes, cron, installed symlinks. Update `verified`. Don't fix a mismatch silently; show it to the human.
 - **Project story.** Explain a project in a couple of minutes from `brief.md` and the decisions, without reading the code.
 - **Routing.** Match a vague request ("what's up with the site") to a project by "Why" and "What it is". Not sure? Name the candidates and ask.
-- **Adopting a project.** `omut start <name>`, then fill in the meta following "Adopting a project" in `.omut/conventions.md`.
+- **Adopting a project.** `omut start <name>`, then fill in the meta following "Adopting a project" in its `.omut/README.md`.
 - **A decision for several projects** is a line in `.omut/decisions.md`; the projects link to it.
 - **`freeze` and `kill`** only with the human's explicit consent. After `kill`, go through the mentions the command printed.
 

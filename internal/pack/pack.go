@@ -16,7 +16,7 @@ import (
 const (
 	MetaDir     = ".omut"
 	LeadFile    = "LEAD.md"
-	Conventions = "conventions.md"
+	Readme      = "README.md"
 	Brief       = "brief.md"
 	Decisions   = "decisions.md"
 	Graveyard   = "graveyard.md"

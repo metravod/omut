@@ -47,7 +47,6 @@ The meta can be checked. The lead doesn't just read what is written, it compares
   AGENTS.md            ← the user's: shared pack rules + the omut pointer block
   .omut/
     LEAD.md            ← the tool's: the lead's instructions
-    conventions.md     ← the tool's: how to keep a project's meta
     brief.md           ← pack meta: focus, shared infrastructure
     decisions.md       ← pack-level decisions
     graveyard.md       ← tombstones of removed projects
@@ -55,7 +54,7 @@ The meta can be checked. The lead doesn't just read what is written, it compares
 ```
 
 Every file has exactly one owner:
-- **Tool files** (`LEAD.md`, `conventions.md`): `zero` updates them to the current template. Nobody edits them by hand.
+- **Tool files** (`LEAD.md` in the root, `.omut/README.md` in every project): `zero` updates them to the current template. Nobody edits them by hand.
 - **User files** (`AGENTS.md`): the tool doesn't touch them, except for the block between `<!-- omut:start -->` and `<!-- omut:end -->`.
 - **Meta files** (`brief.md`, `decisions.md`, `graveyard.md`): agents write them. The tool only checks them and never overwrites them.
 
@@ -65,7 +64,7 @@ The pointer block in the root `AGENTS.md`:
 <!-- omut:start -->
 This directory is an omut pack of projects.
 - If you were started in this directory, you are the lead: read `.omut/LEAD.md`.
-- If you work inside a project, keep its meta by `.omut/conventions.md`.
+- If you work inside a project, keep its meta by that project's `.omut/README.md`.
 <!-- omut:end -->
 ```
 
@@ -75,6 +74,7 @@ This directory is an omut pack of projects.
 <project>/
   AGENTS.md            ← the user's: project specifics + the pointer block
   .omut/
+    README.md          ← the tool's: what this directory is, how to read it, the full rules
     brief.md           ← why, what it is, where it lives, now, next
     decisions.md       ← the decision registry
     threads/<slug>.md  ← threads of work
@@ -84,7 +84,9 @@ This directory is an omut pack of projects.
 
 `.omut/` is hidden so that it stays out of the way in listings. Agents don't need to discover it: the pointer block names the exact paths. Whether `.omut/` goes into `.gitignore` is the user's call.
 
-The pointer block is needed because not every agent climbs above the git root looking for `AGENTS.md`. It carries the minimal ritual itself (what to read at the start, what to write at the end) and a link to `../.omut/conventions.md`: a project may go to a colleague without the pack root, and its meta must still be readable and maintainable there. `zero` updates the block.
+The pointer block is needed because not every agent climbs above the git root looking for `AGENTS.md`. It speaks to two readers: one who only wants to understand the project (read `brief.md`, then the decisions) and one who works on it (the minimal ritual: what to read at the start, what to write at the end). The full rules are in the project's own `.omut/README.md`, not in the pack: a project is cloned, published and handed to colleagues without its pack, and its meta must still be readable and maintainable there. On GitHub the same README is what a person sees on opening `.omut/`. `zero` updates the block and the README.
+
+A pack is optional. Outside one, `start`, `freeze`, `thaw`, `check` and `zero` work on a single project: the directory given, or the current one.
 
 If there is no `CLAUDE.md`, `init` and `start` make it a symlink to `AGENTS.md`. An existing `CLAUDE.md` is left alone; `check` warns (`pointer`) when it doesn't lead to `AGENTS.md`.
 
@@ -184,12 +186,12 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | Command | What it does |
 |---|---|
 | `init [dir]` | Creates the root (and the directory if missing): `AGENTS.md` with the block, `.omut/` with the tool files and pack meta templates. Doesn't touch subdirectories. If the root exists already, refuses and points at `zero`. |
-| `start <name>` | No directory: creates it with meta templates. Existing directory: only adds `.omut/` and the block in `AGENTS.md` (creating `AGENTS.md` if missing). Doesn't touch code or existing files. Refuses a frozen project and points at `thaw`. |
-| `freeze <name>` | `status: frozen` in `brief.md`. If "Where it lives" is not empty, warns: make sure nothing still runs. |
-| `thaw <name>` | `status: active`. |
+| `start [name]` | No directory: creates it with meta templates. Existing directory: only adds `.omut/` (with its README) and the block in `AGENTS.md` (creating `AGENTS.md` if missing). Outside a pack, the project is the directory itself (the current one by default). Doesn't touch code or existing files. Refuses a frozen project and points at `thaw`. |
+| `freeze [name]` | `status: frozen` in `brief.md`. If "Where it lives" is not empty, warns: make sure nothing still runs. |
+| `thaw [name]` | `status: active`. |
 | `kill <name> --yes --reason "..."` | Removes the project directory and writes a tombstone (the reason is required; "what it was" comes from "Why"). Without `--force`, refuses when there are uncommitted changes or commits that are on no remote, and always for a project without git: there is no copy anywhere. A symlinked project loses only the link. Prints where the project is mentioned in other projects' meta; fixing those mentions is the agent's job. |
 | `check [name]` | A report that changes nothing (rules in section 8). Without a name, the whole pack; outside a pack, the project in the current directory if it has `.omut/`. `--json` for agents and automation. Exits non-zero on shape errors. |
-| `zero [name]` | Repairs the scaffold: updates the tool files to the current template, creates missing files from templates, fixes the pointer block. Never touches meta files; only lists their shape errors. Without a name, the root. This is also how a pack is updated after a new release. |
+| `zero [name]` | Repairs the scaffold: updates the tool files to the current template, creates missing files from templates, fixes the pointer block. Never touches meta files; only lists their shape errors. Without a name, the root; outside a pack, the project in the current directory. Removes tool files of earlier versions (the root's `conventions.md`). This is also how a pack is updated after a new release. |
 
 `freeze`, `thaw` and `start` on an existing directory are the only places where the CLI touches meta files. They change the single `status` field or create missing templates.
 
@@ -208,9 +210,9 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | `adr-ahead` | warn | the `adr` directory has files newer than `decisions.md` |
 | `ghost` | warn | a name from `graveyard.md` is mentioned in live projects' meta (logs don't count) |
 | `unfilled` | warn | empty "Why", "What it is" or "Now", an empty `by`, a thread without "Next step": the template was not filled in |
-| `pointer` | warn | `AGENTS.md` has no block, or `CLAUDE.md` doesn't lead to `AGENTS.md` (a symlink, or `@AGENTS.md` in `CLAUDE.md` or `CLAUDE.local.md`) |
+| `pointer` | warn | `AGENTS.md` has no block, `CLAUDE.md` doesn't lead to `AGENTS.md` (a symlink, or `@AGENTS.md` in `CLAUDE.md` or `CLAUDE.local.md`), or the project has no `.omut/README.md` |
 | `scaffold` | error | the root lacks a tool file or a pack meta file; `zero` fixes it |
-| `outdated` | info | a tool file differs from this version's template; `zero` updates it |
+| `outdated` | info | a tool file (the root's `LEAD.md`, a project's `.omut/README.md`) differs from this version's template; `zero` updates it |
 
 A fresh template is not a shape error but `unfilled` and `unverified`: shape errors are kept for what is broken.
 
@@ -220,7 +222,7 @@ A fresh template is not a shape error but `unfilled` and `unverified`: shape err
 
 The rituals are written in the tool files. Any agent carries them out.
 
-**Inside a project** (`conventions.md`):
+**Inside a project** (`.omut/README.md`):
 - **Session start.** Read `brief.md`, the active and parked threads, `open` and `doubted` decisions. If a thread says "Verified", rerun that check before continuing.
 - **A decision is made.** A line in `decisions.md`; an ADR too, if the project keeps them.
 - **Session end or parking.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md`. The result must be checkable: what was done, what was verified and how, what was not, the next step.

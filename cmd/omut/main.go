@@ -24,15 +24,18 @@ const usage = `omut: meta for a pack of projects that any agent can read and che
 
 Commands:
   init [dir]                           create a pack (in the current directory by default)
-  start <project>                      a new project, or adopt an existing directory
-  freeze <project>                     status: frozen
-  thaw <project>                       status: active
+  start [project]                      a new project, or adopt an existing directory
+  freeze [project]                     status: frozen
+  thaw [project]                       status: active
   kill <project> --yes --reason "..."  remove a project, write a tombstone (--force: even with unsaved work)
   check [project] [--json]             check the shape and freshness of the meta
   zero [project]                       repair the scaffold, update the tool files
   version
 
 Flags of init/start/zero: --by agent/model (or $OMUT_BY), who fills in the templates.
+
+Outside a pack, start, freeze, thaw, check and zero work on a single
+project: the directory given, or the current one.
 `
 
 func main() {
@@ -127,6 +130,33 @@ func cmdInit(args []string, out io.Writer) error {
 
 func findPack() (*pack.Pack, error) { return pack.Find(".") }
 
+// target finds the project a command works on. Inside a pack it is a
+// project of the pack, named or given as a path ("." by default); outside
+// any pack it is the directory itself, and p is nil.
+func target(pos []string) (p *pack.Pack, dir, name string, err error) {
+	if len(pos) > 1 {
+		return nil, "", "", errors.New("one project at a time")
+	}
+	arg := "."
+	if len(pos) == 1 {
+		arg = pos[0]
+	}
+	p, err = findPack()
+	if errors.Is(err, pack.ErrNoPack) {
+		if dir, err = filepath.Abs(arg); err != nil {
+			return nil, "", "", err
+		}
+		return nil, dir, filepath.Base(dir), nil
+	}
+	if err != nil {
+		return nil, "", "", err
+	}
+	if name, err = p.Resolve(arg); err != nil {
+		return nil, "", "", err
+	}
+	return p, p.Dir(name), name, nil
+}
+
 func cmdStart(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("start", flag.ContinueOnError)
 	by := byFlag(fs)
@@ -134,27 +164,27 @@ func cmdStart(args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if len(pos) != 1 {
-		return errors.New("need a project name: omut start <project>")
-	}
-	p, err := findPack()
+	p, dir, name, err := target(pos)
 	if err != nil {
 		return err
 	}
-	name, err := p.Resolve(pos[0])
-	if err != nil {
-		return err
-	}
-	res, err := scaffold.Start(p, name, scaffold.Options{By: *by})
+	res, err := scaffold.StartAt(dir, scaffold.Options{By: *by})
 	if err != nil {
 		return err
 	}
 	if len(res.Created)+len(res.Updated) == 0 {
-		fmt.Fprintf(out, "%s is in the pack already, the scaffold is fine.\n", name)
+		if p == nil {
+			fmt.Fprintf(out, "%s has its meta already, the scaffold is fine.\n", name)
+		} else {
+			fmt.Fprintf(out, "%s is in the pack already, the scaffold is fine.\n", name)
+		}
 		return nil
 	}
+	if p == nil {
+		fmt.Fprintf(out, "No pack around %s: it gets its meta as a single project.\n", dir)
+	}
 	printResult(out, res)
-	fmt.Fprintf(out, "\nFill in %s/.omut/brief.md following \"Adopting a project\" in .omut/conventions.md.\n", name)
+	fmt.Fprintf(out, "\nFill in %s/.omut/brief.md following \"Adopting a project\" in %s/.omut/README.md.\n", name, name)
 	return nil
 }
 
@@ -164,18 +194,11 @@ func cmdStatus(args []string, out io.Writer, status string) error {
 	if err != nil {
 		return err
 	}
-	if len(pos) != 1 {
-		return errors.New("need a project name")
-	}
-	p, err := findPack()
+	_, dir, name, err := target(pos)
 	if err != nil {
 		return err
 	}
-	name, err := p.Resolve(pos[0])
-	if err != nil {
-		return err
-	}
-	path := filepath.Join(p.Dir(name), pack.MetaDir, pack.Brief)
+	path := filepath.Join(dir, pack.MetaDir, pack.Brief)
 	d, err := meta.Read(path)
 	if err != nil {
 		return fmt.Errorf("%s has no .omut/brief.md: omut start %s first", name, name)
@@ -309,14 +332,26 @@ func cmdZero(args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	p, err := findPack()
-	if err != nil {
-		return err
-	}
 	opt := scaffold.Options{By: *by}
 	var res *scaffold.Result
 	var findings []check.Finding
-	if len(pos) > 0 {
+	p, err := findPack()
+	switch {
+	case errors.Is(err, pack.ErrNoPack):
+		_, dir, _, err := target(pos)
+		if err != nil {
+			return err
+		}
+		if _, err := os.Stat(filepath.Join(dir, pack.MetaDir)); err != nil {
+			return fmt.Errorf("%s has no .omut/ and there is no pack around: omut start creates the meta", dir)
+		}
+		if res, err = scaffold.ZeroAt(dir, opt); err != nil {
+			return err
+		}
+		findings = check.Standalone(dir, check.Options{})
+	case err != nil:
+		return err
+	case len(pos) > 0:
 		name, err := p.Resolve(pos[0])
 		if err != nil {
 			return err
@@ -325,13 +360,13 @@ func cmdZero(args []string, out io.Writer) error {
 			return err
 		}
 		findings = check.Project(p, name, check.Options{})
-	} else {
+	default:
 		if res, err = scaffold.ZeroRoot(p, opt); err != nil {
 			return err
 		}
 		findings, _ = check.Pack(p, check.Options{})
 	}
-	if len(res.Created)+len(res.Updated) == 0 {
+	if len(res.Created)+len(res.Updated)+len(res.Removed) == 0 {
 		fmt.Fprintln(out, "The scaffold is fine.")
 	} else {
 		printResult(out, res)
@@ -355,6 +390,9 @@ func printResult(out io.Writer, res *scaffold.Result) {
 	}
 	for _, f := range res.Updated {
 		fmt.Fprintln(out, "  updated ", f)
+	}
+	for _, f := range res.Removed {
+		fmt.Fprintln(out, "  removed ", f)
 	}
 	for _, n := range res.Notes {
 		fmt.Fprintln(out, "  ", n)
