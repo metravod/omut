@@ -193,6 +193,8 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | `check [name]` | A report that changes nothing (rules in section 8). Without a name, the whole pack; outside a pack, the project in the current directory if it has `.omut/`. `--json` for agents and automation. Exits non-zero on shape errors. |
 | `zero [name]` | Repairs the scaffold: updates the tool files to the current template, creates missing files from templates, fixes the pointer block. Never touches meta files; only lists their shape errors. Without a name, the root; outside a pack, the project in the current directory. Removes tool files of earlier versions (the root's `conventions.md`). This is also how a pack is updated after a new release. |
 
+| `hook start\|commit` | For hooks, never called by hand: `start` prints the context a session starts from (brief, decisions waiting, unfinished threads, findings), `commit` is a git pre-commit check (a reminder when staged work is newer than the log, a block when the commit carries meta with shape errors; `--strict` also blocks work without a log entry). `--agent claude\|codex\|cursor` reads that agent's payload and answers in its format. Silent outside any meta. Recipes: [`hooks.md`](hooks.md). |
+
 `freeze`, `thaw` and `start` on an existing directory are the only places where the CLI touches meta files. They change the single `status` field or create missing templates.
 
 ## 8. check rules
@@ -242,7 +244,7 @@ The rituals are written in the tool files. Any agent carries them out.
 - **Claude Code:** `CLAUDE.md` with `@AGENTS.md`, or a symlink to `AGENTS.md`. `@AGENTS.md` may also sit in a gitignored `CLAUDE.local.md`, when the tracked `CLAUDE.md` is not yours to change.
 - **Codex:** reads `AGENTS.md`. Whether it climbs above the git root is still to be checked; if not, the project's pointer is enough.
 - **An agent without `AGENTS.md` support:** the human says "read AGENTS.md".
-- **Hooks (optional):** at session start, `omut check <project>` and `cat .omut/brief.md`. Recipes per agent may come as `compatibility/<agent>.md`.
+- **Hooks (optional, recommended):** `omut hook start` at an agent's session start, `omut hook commit` as the git pre-commit hook, `omut check` in CI. The end of a session is a commit, not the agent's stop hook, which fires after every turn. Recipes for git, CI, Claude Code, Codex and Cursor: [`hooks.md`](hooks.md).
 
 ## 11. Implementation
 

@@ -105,6 +105,15 @@ func Standalone(dir string, opt Options) []Finding {
 	return project(filepath.Dir(dir), dir, filepath.Base(dir), opt, nil)
 }
 
+// Dir checks the project at dir, as a project of its pack when it sits
+// right under a pack root, on its own otherwise.
+func Dir(dir string, opt Options) []Finding {
+	if p, err := pack.Find(filepath.Dir(dir)); err == nil && p.Root == filepath.Dir(dir) {
+		return Project(p, filepath.Base(dir), opt)
+	}
+	return Standalone(dir, opt)
+}
+
 func checkRoot(r *report, p *pack.Pack) {
 	for _, file := range []string{pack.LeadFile} {
 		path := p.Lead(file)

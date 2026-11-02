@@ -44,6 +44,7 @@ Agents do the rest: Claude Code, Codex, or anything else that reads `AGENTS.md`.
 | `kill <project> --yes --reason "..."` | remove, write a tombstone, list the mentions |
 | `check [project] [--json]` | the report; non-zero exit on shape errors |
 | `zero [project]` | repair the scaffold, update the tool files |
+| `hook start\|commit` | for hooks: session context for agents, a git pre-commit reminder ([recipes](docs/hooks.md)) |
 
 No pack? In a single repository `omut start` gives it the same meta, rules included, and `check`, `zero`, `freeze` and `thaw` work on that directory.
 
@@ -73,6 +74,7 @@ go test ./...
 ## Docs
 
 - [Specification v0](docs/spec-v0.md)
+- [Hooks for git, CI, Claude Code, Codex, Cursor](docs/hooks.md)
 - [Competitors and neighbours](docs/research/competitors.md)
 
 This repo keeps its own meta by its own spec: see [`.omut/`](.omut/).

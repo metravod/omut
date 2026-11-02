@@ -30,6 +30,7 @@ Commands:
   kill <project> --yes --reason "..."  remove a project, write a tombstone (--force: even with unsaved work)
   check [project] [--json]             check the shape and freshness of the meta
   zero [project]                       repair the scaffold, update the tool files
+  hook start|commit                    for agents' and git's hooks: session context, pre-commit reminder
   version
 
 Flags of init/start/zero: --by agent/model (or $OMUT_BY), who fills in the templates.
@@ -76,6 +77,8 @@ func run(args []string, out io.Writer) error {
 		return cmdCheck(args, out)
 	case "zero":
 		return cmdZero(args, out)
+	case "hook":
+		return cmdHook(args, out, os.Stdin, os.Stderr)
 	case "version", "--version":
 		fmt.Fprintln(out, version)
 		return nil
