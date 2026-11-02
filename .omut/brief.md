@@ -1,7 +1,7 @@
 ---
 status: active
-updated: 2026-11-02
-verified: 2026-11-02
+updated: 2026-11-03
+verified: 2026-11-03
 by: claude-code/opus-5.5
 ---
 ## Why
@@ -14,8 +14,8 @@ A Go CLI without dependencies: `cmd/omut` (commands), `internal/meta` (parsing m
 GitHub: github.com/metravod/omut (public, 2026-11-01). Releases via goreleaser on a v* tag (.github/workflows/release.yml, needs the HOMEBREW_TAP_TOKEN secret); the Homebrew cask goes to github.com/metravod/homebrew-tap (`brew install metravod/tap/omut`). Nothing runs anywhere. Local checkout: `~/oss_projects/omut`, moved from `~/Documents/pet_projects` on 2026-11-02; `~/oss_projects` is the first real pack (6 projects).
 
 ## Now
-v0: all 7 commands and the check rules from the spec. Templates, CLI messages and docs are in English. Since 2026-11-02 (unreleased): every project carries its rules in `.omut/README.md`, a single repository works without a pack (D12), `omut hook start|commit` for agents' and git's hooks (D13, docs/hooks.md).
-**Verified:** `go test ./...` (21 tests: meta parsing, init/start/zero/freeze/kill/check end to end, `stale-brief` through a symlink and with git, `pointer` via `CLAUDE.local.md`, a single project without a pack, README in pack projects, `hook start`/`hook commit`); `zero` on `~/oss_projects` root and omut retires `conventions.md` and lays down the README; `check` on the pack: 0.6 s (two git calls per project).
+v0: all 7 commands and the check rules from the spec. Templates, CLI messages and docs are in English. Since 2026-11-02 (unreleased): every project carries its rules in `.omut/README.md`, a single repository works without a pack (D12), `omut hook start|commit` for agents' and git's hooks (D13, docs/hooks.md); the rules tie recording to "before telling the human it's done", not to a session end no agent sees; `hook start` reports work newer than the log that no commit holds, which is the only signal without git.
+**Verified:** `go test ./...` (22 tests: meta parsing, init/start/zero/freeze/kill/check end to end, `stale-brief` through a symlink and with git, `pointer` via `CLAUDE.local.md`, a single project without a pack, README in pack projects, `hook start`/`hook commit`, unrecorded work with and without git); `zero` on `~/oss_projects` root and omut retires `conventions.md` and lays down the README; `check` on the pack: 0.6 s (two git calls per project).
 **Not verified:** Codex with AGENTS.md above the git root; a handoff to Codex on real meta, now also without the pack (a clone with only `.omut/README.md`); the hook recipes in a live Claude Code, Codex or Cursor session (formats from vendor docs, 2026-11-02); check on a large pack; a release from CI (the HOMEBREW_TAP_TOKEN secret is set, no tag has gone through CI yet).
 
 ## Next

@@ -123,3 +123,34 @@ func TestHookCommit(t *testing.T) {
 		t.Errorf("outside a repo: %q, %v", msg, err)
 	}
 }
+
+func TestHookStartUnrecordedWork(t *testing.T) {
+	// Without git: any file newer than the log.
+	proj := filepath.Join(t.TempDir(), "hn")
+	standalone(t, proj, time.Now().Format("2006-01-02"))
+	logPath := filepath.Join(proj, ".omut/log.md")
+	code := filepath.Join(proj, "main.py")
+	write(t, code, "print(1)\n")
+	past := time.Now().Add(-time.Hour)
+	os.Chtimes(logPath, past, past)
+	if out, _, _ := hookRun(t, proj, "", "start"); !strings.Contains(out, "## Unrecorded work") || !strings.Contains(out, "`main.py` changed at") {
+		t.Errorf("unrecorded work without git not reported:\n%s", out)
+	}
+	write(t, logPath, "- 2026-11-02 · t/t · main.py\n")
+	if out, _, _ := hookRun(t, proj, "", "start"); strings.Contains(out, "Unrecorded work") {
+		t.Errorf("reported after the log was written:\n%s", out)
+	}
+
+	// With git: committed work is not unrecorded, a dirty file is.
+	git(t, proj, "init", "-q")
+	git(t, proj, "add", ".")
+	git(t, proj, "commit", "-qm", "init")
+	os.Chtimes(logPath, past, past)
+	if out, _, _ := hookRun(t, proj, "", "start"); strings.Contains(out, "Unrecorded work") {
+		t.Errorf("committed work reported as unrecorded:\n%s", out)
+	}
+	write(t, code, "print(2)\n")
+	if out, _, _ := hookRun(t, proj, "", "start"); !strings.Contains(out, "`main.py` changed at") {
+		t.Errorf("uncommitted work not reported:\n%s", out)
+	}
+}

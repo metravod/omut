@@ -51,7 +51,7 @@ One or two lines per session, details by link to a thread or a decision. The aut
 
 - **Session start.** Read `brief.md`, the `active` and `parked` threads, the `open` and `doubted` decisions. If a thread says "Verified", rerun that check before continuing.
 - **A decision is made.** A line in `decisions.md`; an ADR too, if the project keeps them.
-- **Session end or parking.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md`. The result must be checkable: what was done, what was verified and how, what was not verified, the next step.
+- **A piece of work is done, or parked.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md` (more work the same session extends that line). Do it before you tell the human the work is done, and before a commit: an agent doesn't see the session end, so waiting for it means never. The result must be checkable: what was done, what was verified and how, what was not verified, the next step.
 - **Freezing.** A final "Now", a log line, check "Where it lives", then `omut freeze <project>`, only with the human's consent.
 
 ### Adopting a project

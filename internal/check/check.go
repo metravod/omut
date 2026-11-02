@@ -263,27 +263,56 @@ func dayAfter(t, day time.Time) bool {
 // it is the newest file mtime outside hidden directories. A symlinked
 // project is resolved first: the walk doesn't descend into a link.
 func newestChange(dir string) (time.Time, string) {
-	if real, err := filepath.EvalSymlinks(dir); err == nil {
-		dir = real
-	}
-	if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-		if when, what, ok := gitChange(dir); ok {
+	dir = resolve(dir)
+	if isRepo(dir) {
+		if when, what, ok := dirtyChange(dir); ok {
+			if commit := lastCommit(dir); commit.After(when) {
+				return commit, "last commit"
+			}
 			return when, what
 		}
 	}
 	return walkChange(dir)
 }
 
-func gitChange(dir string) (time.Time, string, bool) {
-	var when time.Time
-	what := ""
-	// log fails in a repository without commits; status still answers.
-	out, _ := exec.Command("git", "-C", dir, "log", "-1", "--format=%cI", "--", ".", ":(exclude)"+pack.MetaDir).Output()
-	if s := strings.TrimSpace(string(out)); s != "" {
-		if t, err := time.Parse(time.RFC3339, s); err == nil {
-			when, what = t.Local(), "last commit"
+// NewestUnsaved finds the latest change outside .omut/ that no commit
+// holds: in a git repository the changed and untracked files, without git
+// any file, since nothing else keeps it.
+func NewestUnsaved(dir string) (time.Time, string) {
+	dir = resolve(dir)
+	if isRepo(dir) {
+		if when, what, ok := dirtyChange(dir); ok {
+			return when, what
 		}
 	}
+	return walkChange(dir)
+}
+
+func resolve(dir string) string {
+	if real, err := filepath.EvalSymlinks(dir); err == nil {
+		return real
+	}
+	return dir
+}
+
+func isRepo(dir string) bool {
+	_, err := os.Stat(filepath.Join(dir, ".git"))
+	return err == nil
+}
+
+// lastCommit is the date of the last commit that touched anything outside
+// .omut/; zero in a repository without commits.
+func lastCommit(dir string) time.Time {
+	out, _ := exec.Command("git", "-C", dir, "log", "-1", "--format=%cI", "--", ".", ":(exclude)"+pack.MetaDir).Output()
+	if t, err := time.Parse(time.RFC3339, strings.TrimSpace(string(out))); err == nil {
+		return t.Local()
+	}
+	return time.Time{}
+}
+
+// dirtyChange is the newest mtime among the files git reports as changed
+// or untracked, .omut/ aside. ok is false when git can't answer.
+func dirtyChange(dir string) (when time.Time, what string, ok bool) {
 	out, err := exec.Command("git", "-C", dir, "status", "--porcelain", "-z", "--untracked-files=all").Output()
 	if err != nil {
 		return when, what, false

@@ -65,8 +65,9 @@ func startProject(dir string) string {
 	lead := filepath.Join(dir, pack.MetaDir)
 	var b strings.Builder
 	fmt.Fprintf(&b, "# omut: the meta of %s\n\n", filepath.Base(dir))
-	b.WriteString("This project keeps its meta in `.omut/` (rules: `.omut/README.md`). Below is what to read at the start; at the end of the session, keep the meta as the omut block in AGENTS.md says.\n")
+	b.WriteString("This project keeps its meta in `.omut/` (rules: `.omut/README.md`). Below is what to read at the start. When a piece of work is done, record it before you tell the human it is done: a line at the top of `.omut/log.md`, \"Now\" in `.omut/brief.md`, a thread for what is left. You won't see the session end, so don't wait for it.\n")
 
+	writeUnrecorded(&b, dir)
 	writeFindings(&b, check.Dir(dir, check.Options{}), false)
 
 	if text, err := os.ReadFile(filepath.Join(lead, pack.Brief)); err == nil {
@@ -116,6 +117,26 @@ func startProject(dir string) string {
 	}
 	return b.String()
 }
+
+// writeUnrecorded tells about work newer than the last write to the log
+// that no commit holds: a session that ended without recording it, or this
+// session's own work before a resume or a compaction. Without git it is
+// the only signal that a piece of work ended unrecorded.
+func writeUnrecorded(b *strings.Builder, dir string) {
+	logInfo, err := os.Stat(filepath.Join(dir, pack.MetaDir, pack.Log))
+	if err != nil {
+		return
+	}
+	when, what := check.NewestUnsaved(dir)
+	if what == "" || !when.After(logInfo.ModTime()) {
+		return
+	}
+	b.WriteString("\n## Unrecorded work\n\n")
+	fmt.Fprintf(b, "`%s` changed at %s, after the last write to `.omut/log.md` (%s), and no commit holds it. Either a session ended without recording its work, or this is your own session's work before a resume. Find out what was done (the files, `git diff` if there is git) and record it before going on; if it is unclear whose work it is, ask the human.\n",
+		what, when.Format(timeLayout), logInfo.ModTime().Format(timeLayout))
+}
+
+const timeLayout = "2006-01-02 15:04"
 
 // writeFindings lists errors and warnings; open decisions are listed
 // separately for a project, and only counted for a pack.

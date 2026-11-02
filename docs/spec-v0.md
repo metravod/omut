@@ -193,7 +193,7 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | `check [name]` | A report that changes nothing (rules in section 8). Without a name, the whole pack; outside a pack, the project in the current directory if it has `.omut/`. `--json` for agents and automation. Exits non-zero on shape errors. |
 | `zero [name]` | Repairs the scaffold: updates the tool files to the current template, creates missing files from templates, fixes the pointer block. Never touches meta files; only lists their shape errors. Without a name, the root; outside a pack, the project in the current directory. Removes tool files of earlier versions (the root's `conventions.md`). This is also how a pack is updated after a new release. |
 
-| `hook start\|commit` | For hooks, never called by hand: `start` prints the context a session starts from (brief, decisions waiting, unfinished threads, findings), `commit` is a git pre-commit check (a reminder when staged work is newer than the log, a block when the commit carries meta with shape errors; `--strict` also blocks work without a log entry). `--agent claude\|codex\|cursor` reads that agent's payload and answers in its format. Silent outside any meta. Recipes: [`hooks.md`](hooks.md). |
+| `hook start\|commit` | For hooks, never called by hand: `start` prints the context a session starts from (brief, decisions waiting, unfinished threads, findings, and work newer than the last log write that no commit holds), `commit` is a git pre-commit check (a reminder when staged work is newer than the log, a block when the commit carries meta with shape errors; `--strict` also blocks work without a log entry). `--agent claude\|codex\|cursor` reads that agent's payload and answers in its format. Silent outside any meta. Recipes: [`hooks.md`](hooks.md). |
 
 `freeze`, `thaw` and `start` on an existing directory are the only places where the CLI touches meta files. They change the single `status` field or create missing templates.
 
@@ -227,7 +227,7 @@ The rituals are written in the tool files. Any agent carries them out.
 **Inside a project** (`.omut/README.md`):
 - **Session start.** Read `brief.md`, the active and parked threads, `open` and `doubted` decisions. If a thread says "Verified", rerun that check before continuing.
 - **A decision is made.** A line in `decisions.md`; an ADR too, if the project keeps them.
-- **Session end or parking.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md`. The result must be checkable: what was done, what was verified and how, what was not, the next step.
+- **A piece of work is done, or parked.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md`, before telling the human the work is done and before a commit. Not "at session end": no agent sees it. The result must be checkable: what was done, what was verified and how, what was not, the next step.
 - **Freezing.** A final "Now", a log line, check "Where it lives", then `freeze`.
 
 **In the root** (`LEAD.md`):

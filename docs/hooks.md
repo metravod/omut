@@ -8,12 +8,20 @@ The rituals in `AGENTS.md` rest on the agent's discipline, and the end of a sess
 
 | Hook | When | What it does |
 |---|---|---|
-| `omut hook start` | an agent's session starts | Prints the context to start from: the brief, decisions waiting for the human, unfinished threads with their next step, and what `omut check` found. In a pack root, it tells the agent it is the lead and gives the pack's check. |
+| `omut hook start` | an agent's session starts | Prints the context to start from: the brief, decisions waiting for the human, unfinished threads with their next step, and what `omut check` found. Warns about unrecorded work: files newer than the last write to `.omut/log.md` that no commit holds. In a pack root, it tells the agent it is the lead and gives the pack's check. |
 | `omut hook commit` | git pre-commit | Reminds when staged work is newer than the last write to `.omut/log.md`. Blocks a commit that carries meta with shape errors. `--strict` also blocks work committed without a log entry. |
 
-Why the end of a session is a commit and not the agent's "stop": agents fire their stop hook at the end of every turn, not of the session, so a reminder there would nag after every answer. A commit is the moment a piece of work is declared done, it is the same for every agent and for people, and its output is something agents read. Work left uncommitted is caught at the next start: `stale-brief` in the start context says the previous session may not have recorded what it did.
-
 `--agent claude|codex|cursor` makes `omut hook start` read the agent's JSON payload for the session's directory and answer in that agent's format. Without it, the current directory and plain text.
+
+## The end of a piece of work
+
+No agent tells a hook "the session is over". Claude Code, Codex and Cursor fire their stop hook after every turn, so a reminder there would nag after every answer; `SessionEnd` fires when the agent can no longer act. So omut leans on three things, in this order:
+
+1. **Prose.** The rules tie the ritual to a moment the agent does see: before it tells the human a piece of work is done. The omut block in `AGENTS.md`, `.omut/README.md` and the start context all say so.
+2. **The commit.** It is when a piece of work is declared done, it is the same for every agent and for people, and agents read its output: `omut hook commit`.
+3. **The next start.** Work that neither was recorded nor went into a commit shows up in the next session's context as unrecorded work, with the file and the time, and the agent is asked to record it before going on.
+
+**Without git** there is no commit, so only 1 and 3 are left: a piece of work that ended unrecorded is caught at the start of the next session, not when it ends. If that is not enough, `git init` is enough: a local repository with no remote gives the commit hook its signal (and `omut kill` its copy).
 
 ## git
 
@@ -98,4 +106,4 @@ An agent without hooks still gets the omut block in `AGENTS.md`, and the git hoo
 
 ## How far this is verified
 
-The output formats follow each vendor's hook documentation as read on 2026-11-02; `omut hook` itself is covered by tests. None of the agent recipes has been run in a live session yet; the git hook has been run by hand on this repository.
+The output formats follow each vendor's hook documentation as read on 2026-11-02; `omut hook` itself is covered by tests, with and without git. None of the agent recipes has been run in a live session yet; the git hook has been run by hand on this repository.
