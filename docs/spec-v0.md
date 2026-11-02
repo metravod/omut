@@ -200,7 +200,7 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | `no-meta` | error | a root subdirectory without `.omut/` (except `ignore` and hidden ones) |
 | `shape` | error | a missing required frontmatter field or section, a wrong status, a repeated Dn, a broken link |
 | `size` | warn | `brief.md` > 60 lines, a thread > 80 lines, `log.md` > 50 entries (time to rotate) |
-| `stale-brief` | warn | the project has changes newer than `updated` (mtime of files outside hidden directories; with git, also the last commit date) |
+| `stale-brief` | warn | the project has changes newer than `updated`, `.omut/` aside. With git: the last commit that touched anything outside `.omut/`, plus the mtimes of changed and untracked files (a fresh clone is not a change). Without git: the mtime of files outside hidden directories. A symlinked project is followed to its target |
 | `unverified` | warn | an active project whose `verified` is empty or older than 30 days |
 | `stalled-thread` | info | an `active` thread not updated for more than 14 days |
 | `open-decision` | info | `open` and `doubted` decisions: a list for the human |
@@ -208,7 +208,7 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | `adr-ahead` | warn | the `adr` directory has files newer than `decisions.md` |
 | `ghost` | warn | a name from `graveyard.md` is mentioned in live projects' meta (logs don't count) |
 | `unfilled` | warn | empty "Why", "What it is" or "Now", an empty `by`, a thread without "Next step": the template was not filled in |
-| `pointer` | warn | `AGENTS.md` has no block, or `CLAUDE.md` doesn't lead to `AGENTS.md` |
+| `pointer` | warn | `AGENTS.md` has no block, or `CLAUDE.md` doesn't lead to `AGENTS.md` (a symlink, or `@AGENTS.md` in `CLAUDE.md` or `CLAUDE.local.md`) |
 | `scaffold` | error | the root lacks a tool file or a pack meta file; `zero` fixes it |
 | `outdated` | info | a tool file differs from this version's template; `zero` updates it |
 
@@ -237,7 +237,7 @@ The rituals are written in the tool files. Any agent carries them out.
 ## 10. Compatibility
 
 - **Entry point:** `AGENTS.md`. Agents look for it up the tree, so each project has its own `AGENTS.md` with the pointer.
-- **Claude Code:** `CLAUDE.md` with `@AGENTS.md`, or a symlink to `AGENTS.md`.
+- **Claude Code:** `CLAUDE.md` with `@AGENTS.md`, or a symlink to `AGENTS.md`. `@AGENTS.md` may also sit in a gitignored `CLAUDE.local.md`, when the tracked `CLAUDE.md` is not yours to change.
 - **Codex:** reads `AGENTS.md`. Whether it climbs above the git root is still to be checked; if not, the project's pointer is enough.
 - **An agent without `AGENTS.md` support:** the human says "read AGENTS.md".
 - **Hooks (optional):** at session start, `omut check <project>` and `cat .omut/brief.md`. Recipes per agent may come as `compatibility/<agent>.md`.

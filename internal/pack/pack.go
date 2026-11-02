@@ -24,6 +24,7 @@ const (
 	Threads     = "threads"
 	Agents      = "AGENTS.md"
 	Claude      = "CLAUDE.md"
+	ClaudeLocal = "CLAUDE.local.md"
 
 	BlockStart = "<!-- omut:start -->"
 	BlockEnd   = "<!-- omut:end -->"

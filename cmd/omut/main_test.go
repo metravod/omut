@@ -326,3 +326,113 @@ func TestStandaloneProject(t *testing.T) {
 		t.Errorf("standalone project: %+v", fs)
 	}
 }
+
+// standalone lays out a filled project with the given brief date that
+// check accepts as clean.
+func standalone(t *testing.T, dir, updated string) {
+	t.Helper()
+	today := time.Now().Format("2006-01-02")
+	write(t, filepath.Join(dir, ".omut/brief.md"), fill(updated, today, ""))
+	write(t, filepath.Join(dir, ".omut/decisions.md"), "# Decisions\n")
+	write(t, filepath.Join(dir, ".omut/log.md"), "")
+	write(t, filepath.Join(dir, "docs/notes.md"), "n\n")
+	write(t, filepath.Join(dir, "AGENTS.md"), "<!-- omut:start -->\nx\n<!-- omut:end -->\n")
+}
+
+func TestStaleBriefInsideSymlinkedProject(t *testing.T) {
+	root := t.TempDir()
+	must(t, root, "init")
+	outside := filepath.Join(t.TempDir(), "hn")
+	today := time.Now().Format("2006-01-02")
+	standalone(t, outside, today)
+	if err := os.Symlink(outside, filepath.Join(root, "hn")); err != nil {
+		t.Fatal(err)
+	}
+	if fs := findings(t, root, "hn"); has(fs, "hn", "stale-brief") {
+		t.Fatalf("stale-brief before any edit: %+v", fs)
+	}
+	// An edit inside the linked directory, newer than the brief; the link
+	// itself stays as old as it was.
+	edit := filepath.Join(outside, "main.py")
+	write(t, edit, "print(1)\n")
+	later := time.Now().Add(48 * time.Hour)
+	if err := os.Chtimes(edit, later, later); err != nil {
+		t.Fatal(err)
+	}
+	if fs := findings(t, root, "hn"); !has(fs, "hn", "stale-brief") {
+		t.Errorf("stale-brief not reported for an edit inside a symlinked project: %+v", fs)
+	}
+}
+
+func TestStaleBriefWithGit(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("no git")
+	}
+	for k, v := range map[string]string{
+		"GIT_CONFIG_GLOBAL": os.DevNull, "GIT_CONFIG_NOSYSTEM": "1",
+		"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
+	} {
+		t.Setenv(k, v)
+	}
+	git := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	src := filepath.Join(t.TempDir(), "hn")
+	standalone(t, src, "2021-01-01")
+	git(src, "init", "-q")
+	git(src, "add", ".")
+	t.Setenv("GIT_COMMITTER_DATE", "2020-06-01T12:00:00Z")
+	git(src, "commit", "-q", "-m", "old work")
+	os.Unsetenv("GIT_COMMITTER_DATE")
+
+	// A fresh clone: every mtime is today, but nothing changed since 2020.
+	clone := filepath.Join(t.TempDir(), "hn")
+	git(filepath.Dir(clone), "clone", "-q", src, clone)
+	if fs := findings(t, clone); has(fs, "hn", "stale-brief") {
+		t.Errorf("stale-brief on a fresh clone: %+v", fs)
+	}
+	// A commit that touches only the meta is not a change of the project.
+	write(t, filepath.Join(clone, ".omut/log.md"), "- 2021-01-01 · t/t · meta\n")
+	git(clone, "commit", "-q", "-am", "meta")
+	if fs := findings(t, clone); has(fs, "hn", "stale-brief") {
+		t.Errorf("stale-brief after a meta-only commit: %+v", fs)
+	}
+	// An uncommitted edit, and an untracked file, are changes.
+	write(t, filepath.Join(clone, "docs/notes.md"), "edited\n")
+	if fs := findings(t, clone); !has(fs, "hn", "stale-brief") {
+		t.Errorf("stale-brief not reported for an uncommitted edit: %+v", fs)
+	}
+	git(clone, "checkout", "-q", "--", "docs/notes.md")
+	write(t, filepath.Join(clone, "new.py"), "x\n")
+	if fs := findings(t, clone); !has(fs, "hn", "stale-brief") {
+		t.Errorf("stale-brief not reported for an untracked file: %+v", fs)
+	}
+	os.Remove(filepath.Join(clone, "new.py"))
+	// A commit outside the meta is a change.
+	write(t, filepath.Join(clone, "main.py"), "print(1)\n")
+	git(clone, "add", "main.py")
+	git(clone, "commit", "-q", "-m", "work")
+	if err := os.Chtimes(filepath.Join(clone, "main.py"), time.Unix(0, 0), time.Unix(0, 0)); err != nil {
+		t.Fatal(err)
+	}
+	if fs := findings(t, clone); !has(fs, "hn", "stale-brief") {
+		t.Errorf("stale-brief not reported for a new commit: %+v", fs)
+	}
+}
+
+func TestPointerThroughClaudeLocal(t *testing.T) {
+	proj := filepath.Join(t.TempDir(), "hn")
+	standalone(t, proj, time.Now().Format("2006-01-02"))
+	write(t, filepath.Join(proj, "CLAUDE.md"), "# ADR rules for Claude\n")
+	if fs := findings(t, proj); !has(fs, "hn", "pointer") {
+		t.Errorf("pointer not reported for a CLAUDE.md without @AGENTS.md: %+v", fs)
+	}
+	write(t, filepath.Join(proj, "CLAUDE.local.md"), "@AGENTS.md\n")
+	if fs := findings(t, proj); has(fs, "hn", "pointer") {
+		t.Errorf("pointer reported although CLAUDE.local.md has @AGENTS.md: %+v", fs)
+	}
+}

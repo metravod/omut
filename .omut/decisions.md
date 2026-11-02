@@ -10,3 +10,4 @@
 - D8 [accepted 2026-11-01] Go, one static binary. Rejected: Python and Node, which pull in a runtime and contradict "no runtime of its own"
 - D9 [accepted 2026-11-01] One active writer of the meta; parallel work only with an explicit split of responsibility
 - D10 [accepted 2026-11-01] Templates, CLI messages and docs in English; the meta's text is written in whatever language the project's people use, headings and labels stay fixed for `check`
+- D11 [open] Make "Where it lives" machine-checkable: optional `probe:` lines (ssh command, URL, cron) run by `check --probe`, so the check against reality is code, not prose in LEAD.md. Against: network and ssh in a tool that has "no network" (spec §11) → threads/review-2026-11-01.md

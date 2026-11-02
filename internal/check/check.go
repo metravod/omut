@@ -246,14 +246,63 @@ func dayAfter(t, day time.Time) bool {
 	return t.Format(meta.DateLayout) > day.Format(meta.DateLayout)
 }
 
+// newestChange finds the latest change in the project outside .omut/. In a
+// git repository it is the last commit that touched anything outside .omut/
+// plus the mtimes of files git reports as changed or untracked, so a fresh
+// clone, where every mtime is the clone date, is not a change. Without git
+// it is the newest file mtime outside hidden directories. A symlinked
+// project is resolved first: the walk doesn't descend into a link.
+func newestChange(dir string) (time.Time, string) {
+	if real, err := filepath.EvalSymlinks(dir); err == nil {
+		dir = real
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+		if when, what, ok := gitChange(dir); ok {
+			return when, what
+		}
+	}
+	return walkChange(dir)
+}
+
+func gitChange(dir string) (time.Time, string, bool) {
+	var when time.Time
+	what := ""
+	// log fails in a repository without commits; status still answers.
+	out, _ := exec.Command("git", "-C", dir, "log", "-1", "--format=%cI", "--", ".", ":(exclude)"+pack.MetaDir).Output()
+	if s := strings.TrimSpace(string(out)); s != "" {
+		if t, err := time.Parse(time.RFC3339, s); err == nil {
+			when, what = t.Local(), "last commit"
+		}
+	}
+	out, err := exec.Command("git", "-C", dir, "status", "--porcelain", "-z", "--untracked-files=all").Output()
+	if err != nil {
+		return when, what, false
+	}
+	entries := strings.Split(string(out), "\x00")
+	for i := 0; i < len(entries); i++ {
+		e := entries[i]
+		if len(e) < 4 {
+			continue
+		}
+		if e[0] == 'R' || e[0] == 'C' {
+			i++ // the next entry is the rename's source
+		}
+		rel := e[3:]
+		if rel == pack.MetaDir || strings.HasPrefix(rel, pack.MetaDir+"/") {
+			continue
+		}
+		if info, err := os.Lstat(filepath.Join(dir, rel)); err == nil && info.ModTime().After(when) {
+			when, what = info.ModTime(), rel
+		}
+	}
+	return when, what, true
+}
+
 // skipDirs are never part of "the project changed": tool caches and
 // dependency trees. Hidden directories are skipped as well.
 var skipDirs = []string{"node_modules", "__pycache__", "vendor", "target", "dist", "build"}
 
-// newestChange finds the latest change in the project outside .omut/: the
-// newest file mtime, and the last commit date when the project is a git
-// repository.
-func newestChange(dir string) (time.Time, string) {
+func walkChange(dir string) (time.Time, string) {
 	var when time.Time
 	what := ""
 	seen := 0
@@ -280,14 +329,6 @@ func newestChange(dir string) (time.Time, string) {
 		}
 		return nil
 	})
-	if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-		out, err := exec.Command("git", "-C", dir, "log", "-1", "--format=%cI").Output()
-		if err == nil {
-			if t, err := time.Parse(time.RFC3339, strings.TrimSpace(string(out))); err == nil && t.After(when) {
-				when, what = t, "last commit"
-			}
-		}
-	}
 	return when, what
 }
 
@@ -430,9 +471,17 @@ func checkPointer(r *report, dir string) {
 			return
 		}
 	}
-	if c, err := os.ReadFile(claude); err == nil && !strings.Contains(string(c), "@AGENTS.md") && !strings.Contains(string(c), pack.BlockStart) {
-		r.add("pointer", Warn, claude, 0, "Claude Code reads CLAUDE.md and will not see AGENTS.md: move the rules to AGENTS.md and make CLAUDE.md a symlink, or add an @AGENTS.md line")
+	// Claude Code reads CLAUDE.local.md as well, so a gitignored local file
+	// with @AGENTS.md is a valid way in.
+	if leadsToAgents(claude) || leadsToAgents(filepath.Join(dir, pack.ClaudeLocal)) {
+		return
 	}
+	r.add("pointer", Warn, claude, 0, "Claude Code reads CLAUDE.md and will not see AGENTS.md: move the rules to AGENTS.md and make CLAUDE.md a symlink, or add an @AGENTS.md line to CLAUDE.md or CLAUDE.local.md")
+}
+
+func leadsToAgents(path string) bool {
+	c, err := os.ReadFile(path)
+	return err == nil && (strings.Contains(string(c), "@AGENTS.md") || strings.Contains(string(c), pack.BlockStart))
 }
 
 func checkGhosts(r *report, lead, self string, dead []string) {
