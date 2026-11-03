@@ -74,18 +74,27 @@ func startProject(dir string) string {
 		b.WriteString("\n## .omut/brief.md\n\n")
 		b.WriteString(strings.TrimRight(string(text), "\n") + "\n")
 	}
+	var waiting []string
 	if d, err := meta.Read(filepath.Join(lead, pack.Decisions)); err == nil {
 		decs, _ := d.Decisions()
-		var waiting []string
 		for _, dec := range decs {
 			if dec.Status == "open" || dec.Status == "doubted" {
 				waiting = append(waiting, "- "+strings.TrimSpace(d.Lines[dec.Line-1][2:]))
 			}
 		}
-		if len(waiting) > 0 {
-			b.WriteString("\n## Decisions waiting for the human (.omut/decisions.md)\n\n")
-			b.WriteString(strings.Join(waiting, "\n") + "\n")
+	}
+	if brief, err := meta.Read(filepath.Join(lead, pack.Brief)); err == nil && brief.Front["status"] != "frozen" {
+		adrs, _ := check.ADRs(dir, brief)
+		for _, a := range adrs {
+			if w := a.Waiting(); w != "" {
+				rel, _ := filepath.Rel(dir, a.Path)
+				waiting = append(waiting, fmt.Sprintf("- `%s` [%s] %s", filepath.ToSlash(rel), w, a.Title))
+			}
 		}
+	}
+	if len(waiting) > 0 {
+		b.WriteString("\n## Decisions waiting for the human (.omut/decisions.md, ADRs)\n\n")
+		b.WriteString(strings.Join(waiting, "\n") + "\n")
 	}
 	threads, _ := filepath.Glob(filepath.Join(lead, pack.Threads, "*.md"))
 	var open []string

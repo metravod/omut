@@ -8,8 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -148,7 +148,7 @@ func checkRoot(r *report, p *pack.Pack) {
 		checkRefs(r, d, p.Root)
 	}
 	if d, err := meta.Read(p.Lead(pack.Decisions)); err == nil {
-		checkDecisions(r, d)
+		checkDecisions(r, d, false)
 		checkRefs(r, d, p.Root)
 	}
 	checkPointer(r, p.Root)
@@ -167,13 +167,11 @@ func project(base, dir, name string, opt Options, dead []string) []Finding {
 	} else {
 		checkBrief(r, brief, dir, opt)
 		checkRefs(r, brief, dir)
+		checkADR(r, brief, dir, brief.Front["status"] == "frozen")
 	}
 	if d, err := meta.Read(filepath.Join(lead, pack.Decisions)); err == nil {
-		checkDecisions(r, d)
+		checkDecisions(r, d, brief != nil && brief.Front["status"] == "frozen")
 		checkRefs(r, d, dir)
-		if brief != nil {
-			checkADR(r, brief, d, dir)
-		}
 	} else {
 		r.add("shape", Error, filepath.Join(lead, pack.Decisions), 0, "no decisions.md: omut zero %s creates a template", name)
 	}
@@ -415,7 +413,9 @@ func checkThread(r *report, d *meta.Doc, opt Options) {
 	}
 }
 
-func checkDecisions(r *report, d *meta.Doc) {
+// checkDecisions lists open and doubted decisions for the human, except in
+// a frozen project: nobody works on it, its questions wait for a thaw.
+func checkDecisions(r *report, d *meta.Doc, frozen bool) {
 	decs, bad := d.Decisions()
 	for _, line := range bad {
 		r.add("shape", Error, d.Path, line, "decision line out of format: - Dn [open|accepted …|doubted …|superseded → Dn] text")
@@ -434,38 +434,57 @@ func checkDecisions(r *report, d *meta.Doc) {
 				r.add("shape", Error, d.Path, dec.Line, "D%d is superseded by D%d, which does not exist", dec.N, dec.Supersedes)
 			}
 		case "open", "doubted":
+			if frozen {
+				continue
+			}
 			r.add("open-decision", Info, d.Path, dec.Line, "D%d [%s] %s", dec.N, dec.Status, short(dec.Text))
 		}
 	}
 }
 
-func checkADR(r *report, brief, decisions *meta.Doc, dir string) {
+// ADRs reads the project's ADRs from the directory named by adr: in the
+// brief: the .md files whose name starts with a number (0001-x.md,
+// ADR-001-x.md). nil when the brief names none; an error when the
+// directory is missing.
+func ADRs(dir string, brief *meta.Doc) ([]meta.ADR, error) {
 	rel := brief.Front["adr"]
 	if rel == "" {
-		return
+		return nil, nil
 	}
-	adr := filepath.Join(dir, rel)
-	info, err := os.Stat(decisions.Path)
+	entries, err := os.ReadDir(filepath.Join(dir, rel))
 	if err != nil {
-		return
+		return nil, err
 	}
-	var newer []string
-	err = filepath.WalkDir(adr, func(path string, e fs.DirEntry, err error) error {
-		if err != nil {
-			return err
+	var out []meta.ADR
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") || !adrNameRe.MatchString(e.Name()) {
+			continue
 		}
-		if fi, err := e.Info(); err == nil && !e.IsDir() && fi.ModTime().After(info.ModTime()) {
-			newer = append(newer, e.Name())
+		if d, err := meta.Read(filepath.Join(dir, rel, e.Name())); err == nil {
+			out = append(out, meta.ParseADR(d))
 		}
-		return nil
-	})
+	}
+	return out, nil
+}
+
+var adrNameRe = regexp.MustCompile(`(?i)^(adr[-_]?)?\d+`)
+
+// checkADR lists the ADRs that wait for the human the way open and doubted
+// decisions are listed: with adr: in the brief, the ADRs are the registry
+// for the decisions they record (D14). Muted for a frozen project.
+func checkADR(r *report, brief *meta.Doc, dir string, frozen bool) {
+	adrs, err := ADRs(dir, brief)
 	if err != nil {
-		r.add("shape", Error, brief.Path, brief.FrontLine["adr"], "adr: %s, no such directory", rel)
+		r.add("shape", Error, brief.Path, brief.FrontLine["adr"], "adr: %s, no such directory", brief.Front["adr"])
 		return
 	}
-	if len(newer) > 0 {
-		sort.Strings(newer)
-		r.add("adr-ahead", Warn, decisions.Path, 0, "%s has ADRs newer than the registry: %s", rel, strings.Join(newer, ", "))
+	if frozen {
+		return
+	}
+	for _, a := range adrs {
+		if w := a.Waiting(); w != "" {
+			r.add("open-decision", Info, a.Path, a.Line, "%s [%s] %s", strings.TrimSuffix(filepath.Base(a.Path), ".md"), w, short(a.Title))
+		}
 	}
 }
 

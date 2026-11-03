@@ -189,12 +189,16 @@ func TestStaleAndFrozenButLive(t *testing.T) {
 	}
 
 	write(t, filepath.Join(proj, ".omut/brief.md"), fill(today, today, "- a VPS, cron since 2026-06-01"))
+	write(t, filepath.Join(proj, ".omut/decisions.md"), "# Decisions\n\n- D1 [open] Keep the cron or drop it\n")
+	if fs := findings(t, root, "hn"); !has(fs, "hn", "open-decision") {
+		t.Errorf("open decision not listed: %+v", fs)
+	}
 	out := must(t, root, "freeze", "hn")
 	if !strings.Contains(out, "Where it lives") {
 		t.Errorf("freeze did not warn about a live footprint: %q", out)
 	}
 	fs = findings(t, root, "hn")
-	if !has(fs, "hn", "frozen-but-live") || has(fs, "hn", "stale-brief") {
+	if !has(fs, "hn", "frozen-but-live") || has(fs, "hn", "stale-brief") || has(fs, "hn", "open-decision") {
 		t.Errorf("after freeze: %+v", fs)
 	}
 	if _, err := omut(t, root, "start", "hn"); err == nil || !strings.Contains(err.Error(), "thaw") {
@@ -549,5 +553,100 @@ func TestStaleBriefInCommitterTimeZone(t *testing.T) {
 	git(t, filepath.Dir(clone), "clone", "-q", repo, clone)
 	if fs := findings(t, clone); has(fs, "hn", "stale-brief") {
 		t.Errorf("stale-brief from the time zone, not from the work: %+v", fs)
+	}
+}
+
+func TestKillSeesIgnoredFiles(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("no git")
+	}
+	root := t.TempDir()
+	must(t, root, "init")
+	must(t, root, "start", "hn")
+	dir := filepath.Join(root, "hn")
+	remote := filepath.Join(t.TempDir(), "hn.git")
+	git(t, root, "init", "-q", "--bare", remote)
+	write(t, filepath.Join(dir, ".gitignore"), ".env\ntarget/\n")
+	git(t, dir, "init", "-q")
+	git(t, dir, "add", "-A")
+	git(t, dir, "commit", "-qm", "init")
+	git(t, dir, "remote", "add", "origin", remote)
+	git(t, dir, "push", "-q", "origin", "HEAD")
+	write(t, filepath.Join(dir, "target/debug/hn"), "bin\n")
+	write(t, filepath.Join(dir, ".env"), "KEY=1\n")
+
+	_, err := omut(t, root, "kill", "hn", "--yes", "--reason", "x")
+	if err == nil || !strings.Contains(err.Error(), "gitignored, exists only here: .env") || strings.Contains(err.Error(), "target") {
+		t.Errorf("kill with a gitignored .env: %v", err)
+	}
+	os.Remove(filepath.Join(dir, ".env"))
+	must(t, root, "kill", "hn", "--yes", "--reason", "x")
+}
+
+func TestStartOffersTheBadge(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("no git")
+	}
+	for remote, want := range map[string]string{
+		"git@github.com:acme/hn.git":   "github.com/acme/hn/actions/workflows/omut.yml/badge.svg?branch=main)](.omut/)",
+		"https://github.com/acme/hn":   "github.com/acme/hn/actions/workflows/omut.yml/badge.svg?branch=main)](.omut/)",
+		"https://gitlab.com/acme/hn":   "",
+		"git@github.com:acme/my.site/": "github.com/acme/my.site/actions",
+	} {
+		dir := t.TempDir()
+		git(t, dir, "init", "-q")
+		git(t, dir, "remote", "add", "origin", remote)
+		out := must(t, dir, "start")
+		if want == "" && strings.Contains(out, "badge") || want != "" && !strings.Contains(out, want) {
+			t.Errorf("start with origin %s:\n%s", remote, out)
+		}
+	}
+	dir := t.TempDir()
+	git(t, dir, "init", "-q")
+	git(t, dir, "remote", "add", "origin", "git@github.com:acme/mono.git")
+	sub := filepath.Join(dir, "tools", "hn")
+	write(t, filepath.Join(sub, "main.go"), "package main\n")
+	if out := must(t, sub, "start"); strings.Contains(out, "badge") {
+		t.Errorf("a subdirectory of a repository got the badge:\n%s", out)
+	}
+}
+
+func TestADRsAreTheRegistry(t *testing.T) {
+	dir := t.TempDir()
+	today := time.Now().Format("2006-01-02")
+	standalone(t, dir, today)
+	brief := filepath.Join(dir, ".omut/brief.md")
+	write(t, brief, strings.Replace(read(t, brief), "by: codex/gpt-5\n", "by: codex/gpt-5\nadr: docs/adr\n", 1))
+	if fs := findings(t, dir); !has(fs, filepath.Base(dir), "shape") {
+		t.Errorf("adr: names a missing directory, no shape error: %+v", fs)
+	}
+	write(t, filepath.Join(dir, "docs/adr/0001-sqlite.md"), "# SQLite\n\nStatus: Accepted\n")
+	write(t, filepath.Join(dir, "docs/adr/0002-cache.md"), "# Cache pages\n\nStatus: Proposed\n")
+	write(t, filepath.Join(dir, "docs/adr/0003-timer.md"), "# A systemd timer\n\nFirmness: tentative\nRevisit if: it misses runs\n")
+	write(t, filepath.Join(dir, "docs/adr/README.md"), "# ADRs\n\nStatus: proposed\n")
+
+	var open []string
+	for _, f := range findings(t, dir) {
+		if f.Level != check.Info {
+			t.Errorf("unexpected: %+v", f)
+		}
+		if f.Rule == "open-decision" {
+			open = append(open, f.Message)
+		}
+	}
+	if strings.Join(open, "|") != "0002-cache [open] Cache pages|0003-timer [doubted] A systemd timer" {
+		t.Errorf("ADRs waiting: %q", open)
+	}
+	out, _, err := hookRun(t, dir, "", "start")
+	if err != nil || !strings.Contains(out, "- `docs/adr/0002-cache.md` [open] Cache pages") {
+		t.Errorf("hook start does not list the proposed ADR (%v):\n%s", err, out)
+	}
+
+	write(t, filepath.Join(dir, "docs/adr/0004-newer.md"), "# Newer than the registry\n")
+	write(t, brief, strings.Replace(read(t, brief), "status: active", "status: frozen", 1))
+	for _, f := range findings(t, dir) {
+		if f.Rule == "open-decision" || f.Rule == "adr-ahead" {
+			t.Errorf("frozen, or no copy in decisions.md, yet: %+v", f)
+		}
 	}
 }

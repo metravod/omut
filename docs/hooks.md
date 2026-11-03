@@ -60,7 +60,7 @@ jobs:
 
 `--fail-on` needs omut 0.2.0 or later. Drop it to fail on shape errors only.
 
-The badge, in the project's `README.md` (put your owner and repository in the URL), links to `.omut/`, where GitHub shows `.omut/README.md`: what the meta is and how to read it.
+The badge, in the project's `README.md`, links to `.omut/`, where GitHub shows `.omut/README.md`: what the meta is and how to read it. `omut start` prints it with the owner, repository and branch filled in when it adopts the root of a GitHub repository; otherwise put yours in the URL.
 
 ```markdown
 [![omut](https://github.com/OWNER/REPO/actions/workflows/omut.yml/badge.svg?branch=main)](.omut/)
@@ -125,4 +125,4 @@ An agent without hooks still gets the omut block in `AGENTS.md`, and the git hoo
 
 ## How far this is verified
 
-The output formats follow each vendor's hook documentation as read on 2026-11-02; `omut hook` itself is covered by tests, with and without git. None of the agent recipes has been run in a live session yet; the git hook has been run by hand on this repository.
+The output formats follow each vendor's hook documentation as read on 2026-11-02; `omut hook` itself is covered by tests, with and without git. The Claude Code recipe runs live (2026-11-03: a headless `claude -p` session in a pack project quoted the omut context it got at start). The Codex and Cursor recipes have not been run in a live session yet; the git hook has been run by hand on this repository.

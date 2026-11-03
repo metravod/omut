@@ -19,8 +19,8 @@ type Mention struct {
 	Text string
 }
 
-// Unsaved lists what would be lost: uncommitted changes and commits that
-// are on no remote. A project without git has no copy anywhere, so all of
+// Unsaved lists what would be lost: uncommitted changes, gitignored files
+// no build recreates, and commits that are on no remote. A project without git has no copy anywhere, so all of
 // it would be lost.
 func Unsaved(dir string) []string {
 	if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
@@ -36,6 +36,11 @@ func Unsaved(dir string) []string {
 	} else if s != "" {
 		out = append(out, fmt.Sprintf("uncommitted changes: %d files", len(strings.Split(s, "\n"))))
 	}
+	if s, err := git("ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "-z"); err == nil {
+		if lost := ignoredLost(s); len(lost) > 0 {
+			out = append(out, "gitignored, exists only here: "+lost)
+		}
+	}
 	if _, err := git("rev-parse", "--verify", "HEAD"); err != nil {
 		return out // no commits yet
 	}
@@ -45,6 +50,34 @@ func Unsaved(dir string) []string {
 		out = append(out, "commits on no remote: "+s)
 	}
 	return out
+}
+
+// regenerable are gitignored names a build or a tool recreates; losing them
+// loses nothing.
+var regenerable = map[string]bool{
+	".DS_Store": true, "node_modules": true, "target": true, "dist": true, "build": true,
+	".venv": true, "venv": true, "__pycache__": true, ".pytest_cache": true, ".mypy_cache": true,
+	".ruff_cache": true, ".tox": true, ".next": true, ".gradle": true, ".idea": true, ".vscode": true,
+	"coverage": true, ".coverage": true, ".cache": true,
+}
+
+// ignoredLost names the gitignored paths (git ls-files -z output, ignored
+// directories collapsed) that no build recreates: .env, local data, meta
+// kept out of git. "" when there are none.
+func ignoredLost(z string) string {
+	var lost []string
+	for _, p := range strings.Split(z, "\x00") {
+		name := filepath.Base(strings.TrimSuffix(p, "/"))
+		if p == "" || regenerable[name] || strings.HasSuffix(name, ".pyc") || strings.HasSuffix(name, ".egg-info") {
+			continue
+		}
+		lost = append(lost, p)
+	}
+	const shown = 5
+	if len(lost) > shown {
+		return fmt.Sprintf("%s and %d more", strings.Join(lost[:shown], ", "), len(lost)-shown)
+	}
+	return strings.Join(lost, ", ")
 }
 
 // Kill removes a project and writes its tombstone. The guards (--yes,

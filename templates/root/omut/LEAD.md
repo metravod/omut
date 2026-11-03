@@ -17,6 +17,7 @@ The list of projects is stored nowhere: it is the subdirectories of the root, ex
 - **Project story.** Explain a project in a couple of minutes from `brief.md` and the decisions, without reading the code.
 - **Routing.** Match a vague request ("what's up with the site") to a project by "Why" and "What it is". Not sure? Name the candidates and ask.
 - **Adopting a project.** `omut start <name>`, then fill in the meta following "Adopting a project" in its `.omut/README.md`.
+- **Moving a project or the pack.** For every project moved, follow "Moving the project" in its `.omut/README.md`; symlinks between the pack and the outside world break too. Record a moved pack in `.omut/brief.md`.
 - **A decision for several projects** is a line in `.omut/decisions.md`; the projects link to it.
 - **`freeze` and `kill`** only with the human's explicit consent. After `kill`, go through the mentions the command printed.
 
@@ -29,5 +30,5 @@ All are non-interactive. The CLI never writes meta: that is your job.
 | `omut check [project] [--json]` | Report on the shape and freshness of the meta. Exits non-zero on shape errors. |
 | `omut start <name>` | A new project, or adopt an existing directory: `.omut/` templates, a block in `AGENTS.md`. |
 | `omut freeze <name>` / `thaw <name>` | `status: frozen` / `active` in the brief. |
-| `omut kill <name> --yes --reason "..."` | Remove a project, write a tombstone, print the mentions. Without `--force` it refuses when there is uncommitted or unpushed work, or no git at all. |
+| `omut kill <name> --yes --reason "..."` | Remove a project, write a tombstone, print the mentions. Without `--force` it refuses when there is uncommitted or unpushed work, gitignored files no build recreates (`.env`, local data), or no git at all. |
 | `omut zero [project]` | Repair the scaffold: update the tool files, create missing templates, fix the block. Never touches meta. |

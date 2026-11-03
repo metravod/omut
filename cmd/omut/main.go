@@ -189,6 +189,9 @@ func cmdStart(args []string, out io.Writer) error {
 	}
 	printResult(out, res)
 	fmt.Fprintf(out, "\nFill in %s/.omut/brief.md following \"Adopting a project\" in %s/.omut/README.md.\n", name, name)
+	if b := badge(dir); b != "" {
+		fmt.Fprintf(out, "\nThe repository is on GitHub. If it is public, offer the human the omut badge for README.md: it links readers to .omut/ and turns green while CI finds the meta fresh (workflow: %s).\n  %s\n", badgeRecipe, b)
+	}
 	return nil
 }
 

@@ -135,7 +135,7 @@ Headings, field names and labels are fixed because `check` looks for them. The t
 ```
 
 - **Statuses:** `open`: not decided, there are options; `accepted`; `doubted`: decided, but there is a doubt; `superseded → Dn`.
-- **If the project has ADRs,** the line links to the ADR, and the full text is written the way the project does it.
+- **If the project has ADRs** (`adr:` in the brief), they are the registry for the decisions they record (D14): `decisions.md` holds only the decisions without an ADR, and a line at its top says where the ADRs are. `check` reads an ADR's status from frontmatter, a `Status:` line (also `* Status:`, `**Status:**`) or the first line of a `## Status` section: `proposed`, `draft`, `open`, `pending` wait for the human like `open`; `Firmness: tentative` (stare-decisis) like `doubted`, unless the ADR is superseded, deprecated or rejected; no status counts as decided. ADRs are the `.md` files in that directory whose name starts with a number (`0007-x.md`, `ADR-007-x.md`). A registry that already mirrors its ADRs may stay; new ADRs are not copied. A decision line may still link to an ADR.
 - **If there are no ADRs,** the reason goes right into the line: 1–3 sentences, including what was rejected. If it doesn't fit, that's a reason to write an ADR.
 - **Lines are never deleted.** A decision changes through `superseded`.
 
@@ -186,10 +186,10 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | Command | What it does |
 |---|---|
 | `init [dir]` | Creates the root (and the directory if missing): `AGENTS.md` with the block, `.omut/` with the tool files and pack meta templates. Doesn't touch subdirectories. If the root exists already, refuses and points at `zero`. |
-| `start [name]` | No directory: creates it with meta templates. Existing directory: only adds `.omut/` (with its README) and the block in `AGENTS.md` (creating `AGENTS.md` if missing). Outside a pack, the project is the directory itself (the current one by default). Doesn't touch code or existing files. Refuses a frozen project and points at `thaw`. |
+| `start [name]` | No directory: creates it with meta templates. Existing directory: only adds `.omut/` (with its README) and the block in `AGENTS.md` (creating `AGENTS.md` if missing). Outside a pack, the project is the directory itself (the current one by default). Doesn't touch code or existing files. Refuses a frozen project and points at `thaw`. In the root of a git repository whose origin is on GitHub, prints the omut badge line for `README.md` (CI recipe in [`hooks.md`](hooks.md)). |
 | `freeze [name]` | `status: frozen` in `brief.md`. If "Where it lives" is not empty, warns: make sure nothing still runs. |
 | `thaw [name]` | `status: active`. |
-| `kill <name> --yes --reason "..."` | Removes the project directory and writes a tombstone (the reason is required; "what it was" comes from "Why"). Without `--force`, refuses when there are uncommitted changes or commits that are on no remote, and always for a project without git: there is no copy anywhere. A symlinked project loses only the link. Prints where the project is mentioned in other projects' meta; fixing those mentions is the agent's job. |
+| `kill <name> --yes --reason "..."` | Removes the project directory and writes a tombstone (the reason is required; "what it was" comes from "Why"). Without `--force`, refuses when there are uncommitted changes, gitignored files that no build recreates (`.env`, local data, meta kept out of git; caches such as `node_modules/`, `target/`, `.venv/` don't count), or commits that are on no remote, and always for a project without git: there is no copy anywhere. A symlinked project loses only the link. Prints where the project is mentioned in other projects' meta; fixing those mentions is the agent's job. |
 | `check [name]` | A report that changes nothing (rules in section 8). Without a name, the whole pack; outside a pack, the project in the current directory if it has `.omut/`. `--json` for agents and automation. Exits non-zero on shape errors; `--fail-on warn` on warnings too, for CI and its badge. |
 | `zero [name]` | Repairs the scaffold: updates the tool files to the current template, creates missing files from templates, fixes the pointer block. Never touches meta files; only lists their shape errors. Without a name, the root; outside a pack, the project in the current directory. Removes tool files of earlier versions (the root's `conventions.md`). This is also how a pack is updated after a new release. |
 
@@ -207,9 +207,8 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | `stale-brief` | warn | the project has changes newer than `updated`, `.omut/` aside. With git: the last commit that touched anything outside `.omut/`, plus the mtimes of changed and untracked files (a fresh clone is not a change). Without git: the mtime of files outside hidden directories. A symlinked project is followed to its target |
 | `unverified` | warn | an active project whose `verified` is empty or older than 30 days |
 | `stalled-thread` | info | an `active` thread not updated for more than 14 days |
-| `open-decision` | info | `open` and `doubted` decisions: a list for the human |
+| `open-decision` | info | `open` and `doubted` decisions, and ADRs that wait in the same sense (§5): a list for the human. Not listed for a frozen project: its questions wait for a thaw |
 | `frozen-but-live` | warn | `frozen`, but "Where it lives" is not empty |
-| `adr-ahead` | warn | the `adr` directory has files newer than `decisions.md` |
 | `ghost` | warn | a name from `graveyard.md` is mentioned in live projects' meta (logs don't count) |
 | `unfilled` | warn | empty "Why", "What it is" or "Now", an empty `by`, a thread without "Next step": the template was not filled in |
 | `pointer` | warn | `AGENTS.md` has no block, `CLAUDE.md` doesn't lead to `AGENTS.md` (a symlink, or `@AGENTS.md` in `CLAUDE.md` or `CLAUDE.local.md`), or the project has no `.omut/README.md` |
@@ -226,8 +225,9 @@ The rituals are written in the tool files. Any agent carries them out.
 
 **Inside a project** (`.omut/README.md`):
 - **Session start.** Read `brief.md`, the active and parked threads, `open` and `doubted` decisions. If a thread says "Verified", rerun that check before continuing.
-- **A decision is made.** A line in `decisions.md`; an ADR too, if the project keeps them.
+- **A decision is made.** An ADR, if the project keeps them; a line in `decisions.md` otherwise.
 - **A piece of work is done, or parked.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md`, before telling the human the work is done and before a commit. Not "at session end": no agent sees it. The result must be checkable: what was done, what was verified and how, what was not, the next step.
+- **Moving the project.** The meta moves with the directory; what breaks is outside it (symlinks into it, absolute paths in agents' settings, virtualenvs, agents' memory kept by path, cron). Go through "Where it lives", search for the old path, record the move.
 - **Freezing.** A final "Now", a log line, check "Where it lives", then `freeze`.
 
 **In the root** (`LEAD.md`):
@@ -235,7 +235,8 @@ The rituals are written in the tool files. Any agent carries them out.
 - **Audit.** Check "Where it lives" and "Now" against reality with whatever is at hand (ssh, git, logs). Update `verified`. Don't fix mismatches silently; show them to the human.
 - **Project story.** Explain a project in a couple of minutes from `brief.md` and the decisions, without reading the code.
 - **Routing.** Match a vague request ("what's up with the site") to a project by "Why" and "What it is".
-- **Adopting a project.** `start`, then fill in the meta. Look for history everywhere: git, documents and untracked files, old journals, agents' memory and sessions, neighbouring directories, external documents. Don't invent "Why": what the sources don't say, ask. A fork is a separate project: only accepted decisions carry over from the ancestor. Offer to move project rules from a vendor file into `AGENTS.md`.
+- **Adopting a project.** `start`, then fill in the meta. Look for history everywhere: git, documents and untracked files, old journals, agents' memory and sessions, neighbouring directories, external documents. Don't invent "Why": what the sources don't say, ask. A fork is a separate project: only accepted decisions carry over from the ancestor. Reconstructed log entries start with `(from session)`; a date the sources don't give stays unknown (`[accepted ?]`, `(date approximate)`); an old journal that is going away moves as is to `log-archive/`. Offer to move project rules from a vendor file into `AGENTS.md`, and, for a public GitHub repository, the badge `start` prints.
+- **Moving a project or the pack.** The project ritual for every project moved, plus the symlinks between the pack and the outside world.
 - **`freeze` and `kill`** only with the human's explicit consent.
 
 ## 10. Compatibility
