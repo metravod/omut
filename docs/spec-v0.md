@@ -75,16 +75,22 @@ This directory is an omut pack of projects.
   AGENTS.md            ← the user's: project specifics + the pointer block
   .omut/
     README.md          ← the tool's: what this directory is, how to read it, the full rules
+    .gitignore         ← the tool's: keeps local/ out of git
     brief.md           ← why, what it is, where it lives, now, next
     decisions.md       ← the decision registry
     threads/<slug>.md  ← threads of work
     log.md             ← history: one entry per session
     log-archive/       ← rotated parts of the log
+    local/             ← the instance layer, never in git
+      instance.md      ← this copy: its machine, servers, access, runbook
+      log.md           ← this copy's events
 ```
 
 `.omut/` is hidden so that it stays out of the way in listings. Agents don't need to discover it: the pointer block names the exact paths. Whether `.omut/` goes into `.gitignore` is the user's call.
 
 The pointer block is needed because not every agent climbs above the git root looking for `AGENTS.md`. It speaks to two readers: one who only wants to understand the project (read `brief.md`, then the decisions) and one who works on it (the minimal ritual: what to read at the start, what to write at the end). The full rules are in the project's own `.omut/README.md`, not in the pack: a project is cloned, published and handed to colleagues without its pack, and its meta must still be readable and maintainable there. On GitHub the same README is what a person sees on opening `.omut/`. `zero` updates the block and the README.
+
+**Two layers (D15).** Everything in `.omut/` except `local/` is the project layer: it goes into git and to everyone who clones the repository, and it is about continuity: why, what, decisions, the work, the public footprint. `local/` is the instance layer, the memory of one copy, like `.env`: its machine, servers, where secrets are kept, how it is deployed and moved. The test for a fact: would a stranger who clones the repository need it, and is it true for them? `.omut/.gitignore` keeps `local/` out of git without touching the project's own `.gitignore`; `check` warns when git would take it anyway and about facts of a copy (home paths, IP addresses) in the project layer. A pack is the instance layer of several projects: one person's arrangement on one machine.
 
 A pack is optional. Outside one, `start`, `freeze`, `thaw`, `check` and `zero` work on a single project: the directory given, or the current one.
 
@@ -109,7 +115,7 @@ The original intent, 1–3 lines. Never rewritten after the fact: a changed inte
 How it works, 3–10 lines. For a human, to understand the project without the code. Links to the key documents.
 
 ## Where it lives
-The footprint in reality: servers, cron, deploys, installs, data, money, with start dates. Empty means it runs nowhere.
+The public footprint, with dates: the repository, releases, packages, public sites, external documents. This copy's machine and servers go to local/instance.md. Empty means it is published nowhere.
 
 ## Now
 What works, what is broken.
@@ -121,6 +127,26 @@ A short plan, 3–7 items. Small ideas live here too.
 ```
 
 Headings, field names and labels are fixed because `check` looks for them. The text itself is written in whatever language the project's people use.
+
+### local/: the instance layer, never in git
+
+```markdown
+---
+updated: 2026-11-03
+verified: 2026-11-03        # when this copy's footprint was checked against reality
+by: claude-code/opus-5.5
+---
+## Where it lives
+This machine (the checkout, symlinks, installs, virtualenvs, agents' configs), servers, containers, cron, data, backups, with dates.
+
+## Access
+Where the secrets, tokens and accounts are kept: a path, a password manager entry. Never the values.
+
+## Runbook
+How this copy is deployed, rolled back, restarted, moved.
+```
+
+No section is required: a copy that runs nowhere but in its directory leaves them empty. `local/log.md` holds this copy's events (deployed, moved, rotated a token) in the log format. `hook start` gives an agent both layers; a reader on GitHub sees only the project layer.
 
 ### decisions.md: the decision registry
 
@@ -186,7 +212,7 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | Command | What it does |
 |---|---|
 | `init [dir]` | Creates the root (and the directory if missing): `AGENTS.md` with the block, `.omut/` with the tool files and pack meta templates. Doesn't touch subdirectories. If the root exists already, refuses and points at `zero`. |
-| `start [name]` | No directory: creates it with meta templates. Existing directory: only adds `.omut/` (with its README) and the block in `AGENTS.md` (creating `AGENTS.md` if missing). Outside a pack, the project is the directory itself (the current one by default). Doesn't touch code or existing files. Refuses a frozen project and points at `thaw`. In the root of a git repository whose origin is on GitHub, prints the omut badge line for `README.md` (CI recipe in [`hooks.md`](hooks.md)). |
+| `start [name]` | No directory: creates it with meta templates. Existing directory: only adds `.omut/` (with its README, its `.gitignore` and an empty `local/`) and the block in `AGENTS.md` (creating `AGENTS.md` if missing). Outside a pack, the project is the directory itself (the current one by default). Doesn't touch code or existing files. Refuses a frozen project and points at `thaw`. In the root of a git repository whose origin is on GitHub, prints the omut badge line for `README.md` (CI recipe in [`hooks.md`](hooks.md)). |
 | `freeze [name]` | `status: frozen` in `brief.md`. If "Where it lives" is not empty, warns: make sure nothing still runs. |
 | `thaw [name]` | `status: active`. |
 | `kill <name> --yes --reason "..."` | Removes the project directory and writes a tombstone (the reason is required; "what it was" comes from "Why"). Without `--force`, refuses when there are uncommitted changes, gitignored files that no build recreates (`.env`, local data, meta kept out of git; caches such as `node_modules/`, `target/`, `.venv/` don't count), or commits that are on no remote, and always for a project without git: there is no copy anywhere. A symlinked project loses only the link. Prints where the project is mentioned in other projects' meta; fixing those mentions is the agent's job. |
@@ -205,10 +231,13 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | `shape` | error | a missing required frontmatter field or section, a wrong status, a repeated Dn, a broken link |
 | `size` | warn | `brief.md` > 60 lines, a thread > 80 lines, `log.md` > 50 entries (time to rotate) |
 | `stale-brief` | warn | the project has changes newer than `updated`, `.omut/` aside. With git: the last commit that touched anything outside `.omut/`, plus the mtimes of changed and untracked files (a fresh clone is not a change). Without git: the mtime of files outside hidden directories. A symlinked project is followed to its target |
-| `unverified` | warn | an active project whose `verified` is empty or older than 30 days |
+| `unverified` | warn | an active project whose `verified` is empty or older than 30 days; the same for `local/instance.md` once its "Where it lives" says anything |
 | `stalled-thread` | info | an `active` thread not updated for more than 14 days |
 | `open-decision` | info | `open` and `doubted` decisions, and ADRs that wait in the same sense (§5): a list for the human. Not listed for a frozen project: its questions wait for a thaw |
-| `frozen-but-live` | warn | `frozen`, but "Where it lives" is not empty |
+| `frozen-but-live` | warn | `frozen`, but "Where it lives" in the brief or in `local/instance.md` is not empty |
+| `leak` | warn | the project layer (brief, decisions, log, threads) holds what looks like a fact about one copy: a home path (`/Users/…/`, `/home/…/`), an IPv4 address that is not part of a version, `~/` in the brief's "Where it lives". One finding per file |
+| `local-not-ignored` | warn | in a git repository, `.omut/local/` exists and git does not ignore it; `zero` writes `.omut/.gitignore` |
+| `local-in-git` | error | files of `.omut/local/` are tracked by git: every clone gets this copy's facts |
 | `ghost` | warn | a name from `graveyard.md` is mentioned in live projects' meta (logs don't count) |
 | `unfilled` | warn | empty "Why", "What it is" or "Now", an empty `by`, a thread without "Next step": the template was not filled in |
 | `pointer` | warn | `AGENTS.md` has no block, `CLAUDE.md` doesn't lead to `AGENTS.md` (a symlink, or `@AGENTS.md` in `CLAUDE.md` or `CLAUDE.local.md`), or the project has no `.omut/README.md` |
@@ -226,7 +255,7 @@ The rituals are written in the tool files. Any agent carries them out.
 **Inside a project** (`.omut/README.md`):
 - **Session start.** Read `brief.md`, the active and parked threads, `open` and `doubted` decisions. If a thread says "Verified", rerun that check before continuing.
 - **A decision is made.** An ADR, if the project keeps them; a line in `decisions.md` otherwise.
-- **A piece of work is done, or parked.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md`, before telling the human the work is done and before a commit. Not "at session end": no agent sees it. The result must be checkable: what was done, what was verified and how, what was not, the next step.
+- **A piece of work is done, or parked.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md`, before telling the human the work is done and before a commit; what changed only in this copy goes to `local/`. Not "at session end": no agent sees it. The result must be checkable: what was done, what was verified and how, what was not, the next step.
 - **Moving the project.** The meta moves with the directory; what breaks is outside it (symlinks into it, absolute paths in agents' settings, virtualenvs, agents' memory kept by path, cron). Go through "Where it lives", search for the old path, record the move.
 - **Freezing.** A final "Now", a log line, check "Where it lives", then `freeze`.
 

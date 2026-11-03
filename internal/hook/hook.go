@@ -74,6 +74,8 @@ func startProject(dir string) string {
 		b.WriteString("\n## .omut/brief.md\n\n")
 		b.WriteString(strings.TrimRight(string(text), "\n") + "\n")
 	}
+	writeInstance(&b, lead)
+
 	var waiting []string
 	if d, err := meta.Read(filepath.Join(lead, pack.Decisions)); err == nil {
 		decs, _ := d.Decisions()
@@ -146,6 +148,34 @@ func writeUnrecorded(b *strings.Builder, dir string) {
 }
 
 const timeLayout = "2006-01-02 15:04"
+
+// writeInstance adds the instance layer (D15) when it says anything:
+// this copy's footprint, access and runbook, and its latest events.
+func writeInstance(b *strings.Builder, lead string) {
+	local := filepath.Join(lead, pack.Local)
+	if d, err := meta.Read(filepath.Join(local, pack.Instance)); err == nil {
+		filled := false
+		for _, s := range d.Sections() {
+			filled = filled || d.Filled(s)
+		}
+		if filled {
+			b.WriteString("\n## .omut/local/instance.md (this copy only, never in git)\n\n")
+			b.WriteString(strings.TrimRight(strings.Join(d.Lines, "\n"), "\n") + "\n")
+		}
+	}
+	if d, err := meta.Read(filepath.Join(local, pack.Log)); err == nil {
+		entries, _ := d.LogEntries()
+		if len(entries) > 5 {
+			entries = entries[:5]
+		}
+		if len(entries) > 0 {
+			b.WriteString("\n## This copy's latest events (.omut/local/log.md)\n\n")
+			for _, e := range entries {
+				b.WriteString(d.Lines[e.Line-1] + "\n")
+			}
+		}
+	}
+}
 
 // writeFindings lists errors and warnings; open decisions are listed
 // separately for a project, and only counted for a pack.

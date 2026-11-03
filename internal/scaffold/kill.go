@@ -37,7 +37,7 @@ func Unsaved(dir string) []string {
 		out = append(out, fmt.Sprintf("uncommitted changes: %d files", len(strings.Split(s, "\n"))))
 	}
 	if s, err := git("ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "-z"); err == nil {
-		if lost := ignoredLost(s); len(lost) > 0 {
+		if lost := ignoredLost(s, instanceEmpty(dir)); len(lost) > 0 {
 			out = append(out, "gitignored, exists only here: "+lost)
 		}
 	}
@@ -64,11 +64,15 @@ var regenerable = map[string]bool{
 // ignoredLost names the gitignored paths (git ls-files -z output, ignored
 // directories collapsed) that no build recreates: .env, local data, meta
 // kept out of git. "" when there are none.
-func ignoredLost(z string) string {
+func ignoredLost(z string, emptyInstance bool) string {
+	local := pack.MetaDir + "/" + pack.Local + "/"
 	var lost []string
 	for _, p := range strings.Split(z, "\x00") {
 		name := filepath.Base(strings.TrimSuffix(p, "/"))
 		if p == "" || regenerable[name] || strings.HasSuffix(name, ".pyc") || strings.HasSuffix(name, ".egg-info") {
+			continue
+		}
+		if emptyInstance && (p == local || strings.HasPrefix(p, local)) {
 			continue
 		}
 		lost = append(lost, p)
@@ -78,6 +82,38 @@ func ignoredLost(z string) string {
 		return fmt.Sprintf("%s and %d more", strings.Join(lost[:shown], ", "), len(lost)-shown)
 	}
 	return strings.Join(lost, ", ")
+}
+
+// instanceEmpty says whether the instance layer holds nothing but its
+// templates: no section filled in instance.md, no entry in its log. Losing
+// it loses nothing.
+func instanceEmpty(dir string) bool {
+	local := filepath.Join(dir, pack.MetaDir, pack.Local)
+	entries, err := os.ReadDir(local)
+	if err != nil {
+		return true
+	}
+	for _, e := range entries {
+		path := filepath.Join(local, e.Name())
+		d, err := meta.Read(path)
+		switch {
+		case err != nil || e.IsDir():
+			return false
+		case e.Name() == pack.Instance:
+			for _, sec := range d.Sections() {
+				if d.Filled(sec) {
+					return false
+				}
+			}
+		case e.Name() == pack.Log:
+			if entries, bad := d.LogEntries(); len(entries)+len(bad) > 0 {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // Kill removes a project and writes its tombstone. The guards (--yes,

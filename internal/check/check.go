@@ -188,6 +188,9 @@ func project(base, dir, name string, opt Options, dead []string) []Finding {
 			checkRefs(r, d, dir)
 		}
 	}
+	active := brief == nil || brief.Front["status"] != "frozen"
+	checkInstance(r, dir, opt, active)
+	checkLeak(r, lead)
 	checkReadme(r, lead, name)
 	checkPointer(r, dir)
 	if len(dead) > 0 {
@@ -245,8 +248,8 @@ func checkBrief(r *report, d *meta.Doc, dir string, opt Options) {
 			r.add("unverified", Warn, d.Path, d.FrontLine["verified"], "last checked %s, more than %d days ago", v, VerifyDays)
 		}
 	}
-	if live, ok := d.Section("Where it lives"); ok && status == "frozen" && d.Filled(live) {
-		r.add("frozen-but-live", Warn, d.Path, live.Line, "the project is frozen, but \"Where it lives\" is not empty: make sure nothing is still running")
+	if live, ok := d.Section("Where it lives"); ok && status == "frozen" && (d.Filled(live) || instanceLive(dir)) {
+		r.add("frozen-but-live", Warn, d.Path, live.Line, "the project is frozen, but \"Where it lives\" (here or in .omut/local/instance.md) is not empty: make sure nothing is still running")
 	}
 	if updatedOK {
 		if when, what := newestChange(dir); !when.IsZero() && dayAfter(when, updated) {
@@ -509,6 +512,11 @@ func checkLog(r *report, d *meta.Doc) {
 func checkRefs(r *report, d *meta.Doc, root string) {
 	for _, ref := range d.Refs() {
 		if exists(filepath.Join(filepath.Dir(d.Path), ref.Target)) || exists(filepath.Join(root, ref.Target)) {
+			continue
+		}
+		// The instance layer exists only in this copy: a clone has no
+		// local/, and a link into it is not broken there.
+		if t := strings.TrimPrefix(strings.TrimPrefix(ref.Target, pack.MetaDir+"/"), "./"); t == pack.Local || strings.HasPrefix(t, pack.Local+"/") {
 			continue
 		}
 		r.add("shape", Error, d.Path, ref.Line, "broken link: %s", ref.Target)

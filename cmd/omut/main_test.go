@@ -580,6 +580,11 @@ func TestKillSeesIgnoredFiles(t *testing.T) {
 		t.Errorf("kill with a gitignored .env: %v", err)
 	}
 	os.Remove(filepath.Join(dir, ".env"))
+	write(t, filepath.Join(dir, ".omut/local/log.md"), "- 2026-11-03 · human · deployed to vps1\n")
+	if _, err := omut(t, root, "kill", "hn", "--yes", "--reason", "x"); err == nil || !strings.Contains(err.Error(), ".omut/local/") {
+		t.Errorf("kill with a filled instance layer: %v", err)
+	}
+	write(t, filepath.Join(dir, ".omut/local/log.md"), "<!-- newest first -->\n")
 	must(t, root, "kill", "hn", "--yes", "--reason", "x")
 }
 
@@ -647,6 +652,80 @@ func TestADRsAreTheRegistry(t *testing.T) {
 	for _, f := range findings(t, dir) {
 		if f.Rule == "open-decision" || f.Rule == "adr-ahead" {
 			t.Errorf("frozen, or no copy in decisions.md, yet: %+v", f)
+		}
+	}
+}
+
+func TestInstanceLayerStaysOutOfGit(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("no git")
+	}
+	dir := t.TempDir()
+	git(t, dir, "init", "-q")
+	must(t, dir, "start")
+	for _, f := range []string{".omut/.gitignore", ".omut/local/instance.md", ".omut/local/log.md"} {
+		if _, err := os.Stat(filepath.Join(dir, f)); err != nil {
+			t.Errorf("start did not lay down %s", f)
+		}
+	}
+	git(t, dir, "add", "-A")
+	out, err := exec.Command("git", "-C", dir, "diff", "--cached", "--name-only").Output()
+	if err != nil || strings.Contains(string(out), "local/") || !strings.Contains(string(out), ".omut/.gitignore") {
+		t.Errorf("git add -A staged:\n%s", out)
+	}
+	if fs := findings(t, dir); has(fs, filepath.Base(dir), "local-not-ignored") || has(fs, filepath.Base(dir), "local-in-git") {
+		t.Errorf("a fresh start: %+v", fs)
+	}
+
+	write(t, filepath.Join(dir, ".omut/local/instance.md"), "---\nupdated: 2026-11-03\nverified:\nby: human\n---\n## Where it lives\n- container hn on vps1, image hn:abc\n\n## Access\n- token in ~/hn/.env\n\n## Runbook\n")
+	write(t, filepath.Join(dir, ".omut/local/log.md"), "- 2026-11-03 · human · deployed abc to vps1\n")
+	hookOut, _, _ := hookRun(t, dir, "", "start")
+	for _, want := range []string{"## .omut/local/instance.md (this copy only, never in git)", "container hn on vps1", "deployed abc to vps1"} {
+		if !strings.Contains(hookOut, want) {
+			t.Errorf("hook start lacks %q:\n%s", want, hookOut)
+		}
+	}
+	if fs := findings(t, dir); !has(fs, filepath.Base(dir), "unverified") {
+		t.Errorf("an instance footprint never verified: %+v", fs)
+	}
+
+	os.RemoveAll(filepath.Join(dir, ".omut/local"))
+	write(t, filepath.Join(dir, ".omut/decisions.md"), "# Decisions\n\n- D1 [accepted 2026-11-03] Deploy by hand → local/instance.md\n")
+	if fs := findings(t, dir); has(fs, filepath.Base(dir), "shape") {
+		t.Errorf("a link into local/ on a clone without it is not broken: %+v", fs)
+	}
+	must(t, dir, "zero")
+	os.Remove(filepath.Join(dir, ".omut/.gitignore"))
+	if fs := findings(t, dir); !has(fs, filepath.Base(dir), "local-not-ignored") {
+		t.Errorf("no .omut/.gitignore, no warning: %+v", fs)
+	}
+	git(t, dir, "add", "-f", ".omut/local/instance.md")
+	if fs := findings(t, dir); !has(fs, filepath.Base(dir), "local-in-git") {
+		t.Errorf("the instance layer is staged, no error: %+v", fs)
+	}
+}
+
+func TestLeakOfInstanceFacts(t *testing.T) {
+	dir := t.TempDir()
+	today := time.Now().Format("2006-01-02")
+	standalone(t, dir, today)
+	brief := filepath.Join(dir, ".omut/brief.md")
+	clean := read(t, brief)
+	name := filepath.Base(dir)
+
+	write(t, brief, strings.Replace(clean, "Works.\n", "Works on Python 3.12.1 and 1.2.3.4-beta; rules in ~/.claude/settings.json.\n", 1))
+	write(t, filepath.Join(dir, ".omut/local/instance.md"), "---\nupdated: "+today+"\nverified: "+today+"\nby: human\n---\n## Where it lives\n- ~/hn, 10.0.0.5, /Users/bob/hn\n")
+	if fs := findings(t, dir); has(fs, name, "leak") {
+		t.Errorf("versions, a general ~/ path or the instance layer reported as a leak: %+v", fs)
+	}
+	for what, text := range map[string]string{
+		"~/ where it lives": strings.Replace(clean, "## Where it lives\n", "## Where it lives\n- symlink ~/.claude/skills/hn → here\n", 1),
+		"an IP":             strings.Replace(clean, "Works.\n", "Works on 10.0.0.5.\n", 1),
+		"a home path":       strings.Replace(clean, "Works.\n", "Works from /home/bob/hn.\n", 1),
+	} {
+		write(t, brief, text)
+		if fs := findings(t, dir); !has(fs, name, "leak") {
+			t.Errorf("%s not reported: %+v", what, fs)
 		}
 	}
 }

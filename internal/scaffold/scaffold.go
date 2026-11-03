@@ -132,8 +132,14 @@ func zeroProject(dir string, opt Options) (*Result, error) {
 	res := &Result{}
 	w := writer{dir: dir, res: res, opt: opt}
 	w.tool("project/omut/"+pack.Readme, filepath.Join(pack.MetaDir, pack.Readme))
+	// The template is "gitignore": go:embed leaves out files whose name
+	// starts with a dot.
+	w.tool("project/omut/gitignore", filepath.Join(pack.MetaDir, pack.Ignore))
 	for _, file := range projectMeta {
 		w.meta("project/omut/"+file, filepath.Join(pack.MetaDir, file))
+	}
+	for _, file := range []string{pack.Instance, pack.Log} {
+		w.meta("project/omut/local/"+file, filepath.Join(pack.MetaDir, pack.Local, file))
 	}
 	w.mkdir(filepath.Join(pack.MetaDir, pack.Threads))
 	w.block("project/block.md")

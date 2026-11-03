@@ -13,7 +13,7 @@ The list of projects is stored nowhere: it is the subdirectories of the root, ex
 ## Rituals
 
 - **Overview** ("what's going on"). Run `omut check`, read the `brief.md` of the active projects. Tell the human what waits for them: open and doubted decisions, stalled threads, stale briefs, mismatches. Start with what needs a decision.
-- **Audit.** Check "Where it lives" and "Now" against reality with whatever you have: git, ssh, logs, processes, cron, installed symlinks. Update `verified`. Don't fix a mismatch silently; show it to the human.
+- **Audit.** Check "Where it lives" (the brief's public footprint and each project's `.omut/local/instance.md`) and "Now" against reality with whatever you have: git, ssh, logs, processes, cron, installed symlinks. Update `verified`. Don't fix a mismatch silently; show it to the human.
 - **Project story.** Explain a project in a couple of minutes from `brief.md` and the decisions, without reading the code.
 - **Routing.** Match a vague request ("what's up with the site") to a project by "Why" and "What it is". Not sure? Name the candidates and ask.
 - **Adopting a project.** `omut start <name>`, then fill in the meta following "Adopting a project" in its `.omut/README.md`.

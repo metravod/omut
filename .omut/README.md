@@ -10,6 +10,8 @@ This directory holds the project's meta in the [omut](https://github.com/metravo
 3. `threads/`: unfinished work, each thread with its next step.
 4. `log.md`: one line per session, newest first.
 
+`local/` is not in git: each copy of the project keeps its own there (see "Two layers").
+
 Reading needs nothing installed. If you are only reading, you don't write anything here.
 
 ## Keeping it
@@ -18,6 +20,13 @@ If you work on the project, keep the meta by the rules below. `omut check` check
 
 Headings, field names and labels stay as below: `check` looks for them. Write the text itself in the language the project's people use.
 
+### Two layers
+
+- **The project layer** (`brief.md`, `decisions.md`, `threads/`, `log.md`) goes into git and to everyone who clones the repository: why, what, decisions, the work, and the public footprint (the repository, releases, packages, public sites).
+- **The instance layer** (`local/`) is the memory of this copy, like `.env`: this machine (the checkout, symlinks, installs, virtualenvs, agents' configs), servers and containers, cron, data and backups, where secrets are kept (never the values), how to deploy and roll back. `.omut/.gitignore` keeps it out of git.
+
+The test for a fact: would a stranger who clones the repository need it, and is it true for them? If not, it goes to `local/`. `check` warns about home paths and IP addresses in the project layer.
+
 ### Files
 
 **`brief.md`: the project's brief. Always read, at most 60 lines.**
@@ -25,7 +34,7 @@ Frontmatter: `status` (`active` | `frozen`), `updated` (when the text changed), 
 Sections, all required:
 - **Why**: the original intent, 1–3 lines. Never rewritten after the fact: a changed intent is a decision in `decisions.md`.
 - **What it is**: how it works, 3–10 lines, for a human. Links to the project's key documents.
-- **Where it lives**: the footprint in reality, with dates: servers, cron and timers, deploys, installs (symlinks, global skills, packages), data, external documents, money. Empty means it runs nowhere.
+- **Where it lives**: the public footprint, with dates: the repository, releases, packages, public sites, external documents. This copy's machine and servers go to `local/instance.md`. Empty means it is published nowhere.
 - **Now**: what works, what is broken. Lines `**Verified:**` (how) and `**Not verified:**`.
 - **Next**: 3–7 items. Small ideas live here too.
 
@@ -43,6 +52,8 @@ Frontmatter: `status` (`active` | `parked` | `done` | `dropped`), `updated`, `by
 
 Body: `# Title`, then the lines `**Goal:**`, `**Where we got:**`, `**Verified:**` / `**Not verified:**`, `**Open:**`, `**Next step:**`.
 
+**`local/instance.md`: this copy's memory.** Not in git. Frontmatter: `updated`, `verified` (when its footprint was last checked against reality), `by`. Sections: **Where it lives** (this machine, servers, containers, cron, data, backups, with dates), **Access** (where the secrets, tokens and accounts are kept, never the values), **Runbook** (deploy, roll back, restart, move). `local/log.md` is this copy's events in the log format: deployed, moved, rotated a token.
+
 **`log.md`: history, newest first.**
 `- 2026-10-31 · claude-code/opus-5.5 · What was done; verified: how → link`
 One or two lines per session, details by link to a thread or a decision. The author is `agent/model` or `human`. Past 50 entries, old ones move to `log-archive/<year>.md`.
@@ -51,8 +62,8 @@ One or two lines per session, details by link to a thread or a decision. The aut
 
 - **Session start.** Read `brief.md`, the `active` and `parked` threads, the `open` and `doubted` decisions. If a thread says "Verified", rerun that check before continuing.
 - **A decision is made.** An ADR, if the project keeps them; a line in `decisions.md` otherwise.
-- **A piece of work is done, or parked.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md` (more work the same session extends that line). Do it before you tell the human the work is done, and before a commit: an agent doesn't see the session end, so waiting for it means never. The result must be checkable: what was done, what was verified and how, what was not verified, the next step.
-- **Moving the project.** The meta moves with the directory; what breaks is outside it: symlinks into it, absolute paths in agents' settings and permission rules, virtualenvs, agents' memory kept by path, cron and services. Go through "Where it lives", search for the old path, fix what you can and show the human the rest; record the move in "Where it lives" and the log.
+- **A piece of work is done, or parked.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md` (more work the same session extends that line); what changed in this copy only (a deploy, a move, an install) goes to `local/instance.md` and `local/log.md`. Do it before you tell the human the work is done, and before a commit: an agent doesn't see the session end, so waiting for it means never. The result must be checkable: what was done, what was verified and how, what was not verified, the next step.
+- **Moving the project.** The meta moves with the directory; what breaks is outside it: symlinks into it, absolute paths in agents' settings and permission rules, virtualenvs, agents' memory kept by path, cron and services. Go through "Where it lives" in `local/instance.md`, search for the old path, fix what you can and show the human the rest; record the move there and in `local/log.md`.
 - **Freezing.** A final "Now", a log line, check "Where it lives", then `omut freeze <project>`, only with the human's consent.
 
 ### Adopting a project
@@ -71,4 +82,5 @@ A project without meta (`omut start` creates the templates):
 - Only one agent keeps a project's meta at a time. Parallel work needs an explicit split of responsibility.
 - Don't copy project artifacts (ADRs, plans, docs) into the meta; link to them.
 - Don't fix a mismatch between the record and reality silently; show it to the human.
+- Don't put this copy's facts into the project layer, and never secret values anywhere in the meta.
 - If the repo is distributed (a skill, a package, a template), committed meta ships to its users: decide whether `.omut/` belongs in `.gitignore`.
