@@ -94,7 +94,7 @@ mise use -g github:metravod/omut                   # mise
 go install github.com/metravod/omut/cmd/omut@latest
 ```
 
-`install.sh` takes the latest release for your OS and CPU, checks it against `checksums.txt` and puts `omut` into `~/.local/bin` (`OMUT_DIR` and `OMUT_VERSION` change that). Binaries for macOS, Linux and Windows are on the [releases page](https://github.com/metravod/omut/releases); Windows itself is built but not yet tried, WSL works like Linux. From source: `go build ./cmd/omut && go test ./...` (Go standard library only).
+`install.sh` takes the latest release for your OS and CPU, checks it against `checksums.txt` and puts `omut` into `~/.local/bin` (`OMUT_DIR` and `OMUT_VERSION` change that). mise takes a release only once it is a day old, by its own default. Binaries for macOS, Linux and Windows are on the [releases page](https://github.com/metravod/omut/releases); Windows itself is built but not yet tried, WSL works like Linux. From source: `go build ./cmd/omut && go test ./...` (Go standard library only).
 
 ## Docs
 
