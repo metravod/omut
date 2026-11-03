@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -685,8 +686,8 @@ func TestInstanceLayerStaysOutOfGit(t *testing.T) {
 			t.Errorf("hook start lacks %q:\n%s", want, hookOut)
 		}
 	}
-	if fs := findings(t, dir); !has(fs, filepath.Base(dir), "unverified") {
-		t.Errorf("an instance footprint never verified: %+v", fs)
+	if fs := findings(t, dir); !has(fs, filepath.Base(dir), "unchecked") {
+		t.Errorf("claims without a way to check them not counted: %+v", fs)
 	}
 
 	os.RemoveAll(filepath.Join(dir, ".omut/local"))
@@ -727,5 +728,49 @@ func TestLeakOfInstanceFacts(t *testing.T) {
 		if fs := findings(t, dir); !has(fs, name, "leak") {
 			t.Errorf("%s not reported: %+v", what, fs)
 		}
+	}
+}
+
+func TestClaimsAreCheckedByAgents(t *testing.T) {
+	dir := t.TempDir()
+	today := time.Now()
+	day := func(ago int) string { return today.AddDate(0, 0, -ago).Format("2006-01-02") }
+	standalone(t, dir, day(0))
+	name := filepath.Base(dir)
+	brief := filepath.Join(dir, ".omut/brief.md")
+	write(t, brief, strings.Replace(read(t, brief), "## Where it lives\n", "## Where it lives\n- PyPI: hn 1.0 · how: pip index versions hn · seen "+day(2)+"\n- GitHub: public\n", 1))
+	write(t, filepath.Join(dir, ".omut/local/instance.md"), "---\nupdated: "+day(0)+"\nby: human\n---\n## Where it lives\n"+
+		"- skill hn → this checkout · how: readlink ~/.claude/skills/hn · seen "+day(40)+"\n"+
+		"- cron on vps1 · how: ssh vps1 crontab -l\n"+
+		"- data in ~/hn-data · how: ls ~/hn-data · seen "+day(10)+"\n"+
+		"## Access\n- token in ~/hn/.env · how: test -f ~/hn/.env · seen yesterday\n")
+
+	fs := findings(t, dir)
+	var unseen []int
+	for _, f := range fs {
+		if f.Rule == "unseen" {
+			unseen = append(unseen, f.Line)
+		}
+	}
+	if fmt.Sprint(unseen) != "[6 7]" || !has(fs, name, "unchecked") || !has(fs, name, "shape") {
+		t.Errorf("unseen on lines %v (want the 40-day-old and the never-seen claims), all: %+v", unseen, fs)
+	}
+
+	out, _, _ := hookRun(t, dir, "", "start")
+	_, out, _ = strings.Cut(out, "## Check while you are here")
+	i, j := strings.Index(out, "`.omut/local/instance.md:7` cron on vps1"), strings.Index(out, "`.omut/local/instance.md:6` skill hn")
+	if i < 0 || j < i || strings.Count(out, "· how: `") != 2 || strings.Contains(out, "PyPI: hn 1.0") {
+		t.Errorf("hook start should offer the never-seen claim, then the oldest, two at most, not the fresh one:\n%s", out)
+	}
+	if !strings.Contains(out, "1 claim about where the project lives says no way to check it") {
+		t.Errorf("hook start does not count the unchecked claim:\n%s", out)
+	}
+
+	write(t, brief, strings.Replace(read(t, brief), "status: active", "status: frozen", 1))
+	if fs := findings(t, dir); has(fs, name, "unseen") {
+		t.Errorf("a frozen project's claims: %+v", fs)
+	}
+	if out, _, _ := hookRun(t, dir, "", "start"); strings.Contains(out, "Check while you are here") {
+		t.Errorf("a frozen project is asked to check claims:\n%s", out)
 	}
 }

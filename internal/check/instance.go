@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -36,21 +37,44 @@ func checkInstance(r *report, dir string, opt Options, active bool) {
 	if d, err := meta.Read(filepath.Join(local, pack.Log)); err == nil {
 		checkLog(r, d)
 	}
-	d, err := meta.Read(filepath.Join(local, pack.Instance))
-	if err != nil {
-		return
+	if d, err := meta.Read(filepath.Join(local, pack.Instance)); err == nil && active {
+		checkClaims(r, d, opt, instanceSections...)
 	}
-	live, ok := d.Section("Where it lives")
-	if !ok || !d.Filled(live) || !active {
-		return
+}
+
+// Sections whose "- " lines are claims about reality (D11).
+var (
+	briefClaimSections = []string{"Where it lives"}
+	instanceSections   = []string{"Where it lives", "Access"}
+)
+
+// checkClaims looks at what the meta says about reality without looking
+// at reality: a claim with a way to check it ("how:") must have been seen
+// in the last VerifyDays days; claims without one are counted. Agents run
+// the checks; omut only remembers them (D11).
+func checkClaims(r *report, d *meta.Doc, opt Options, sections ...string) {
+	today := opt.today()
+	var unchecked []meta.Claim
+	for _, c := range d.Claims(sections...) {
+		if c.How == "" {
+			unchecked = append(unchecked, c)
+			continue
+		}
+		if c.Seen == "" {
+			r.add("unseen", Warn, d.Path, c.Line, "never checked: %s (how: %s)", short(c.Text), c.How)
+			continue
+		}
+		t, ok := meta.ParseDate(c.Seen)
+		if !ok {
+			r.add("shape", Error, d.Path, c.Line, "seen %q: want a YYYY-MM-DD date", c.Seen)
+			continue
+		}
+		if today.Sub(t) > VerifyDays*24*time.Hour {
+			r.add("unseen", Warn, d.Path, c.Line, "last checked %s, more than %d days ago: %s (how: %s)", c.Seen, VerifyDays, short(c.Text), c.How)
+		}
 	}
-	v := d.Front["verified"]
-	if v == "" {
-		r.add("unverified", Warn, d.Path, d.FrontLine["verified"], "this copy's footprint was never checked against reality")
-	} else if t, ok := meta.ParseDate(v); !ok {
-		r.add("shape", Error, d.Path, d.FrontLine["verified"], "verified %q: want a YYYY-MM-DD date", v)
-	} else if opt.today().Sub(t) > VerifyDays*24*time.Hour {
-		r.add("unverified", Warn, d.Path, d.FrontLine["verified"], "this copy's footprint was last checked %s, more than %d days ago", v, VerifyDays)
+	if len(unchecked) > 0 {
+		r.add("unchecked", Info, d.Path, unchecked[0].Line, "%d of the claims about where it lives say no way to check them (\" · how: ...\"), first: %s", len(unchecked), short(unchecked[0].Text))
 	}
 }
 
@@ -159,4 +183,51 @@ func findIPv4(line string) string {
 
 func isWord(c byte) bool {
 	return c == '_' || c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
+}
+
+// DueDays: a claim seen longer ago than this is offered to the agent at
+// session start, well before it turns into an unseen warning.
+const DueDays = 7
+
+// DueClaim is a claim to check now, with the file it is in, relative to
+// the project.
+type DueClaim struct {
+	File string
+	meta.Claim
+}
+
+// Due picks up to n claims an agent should check at the start of a
+// session: those with a way to check them, never seen first, then the
+// oldest, none seen in the last DueDays days. It also counts the claims
+// with no way to check them. Nothing for a frozen project. This is how
+// the audit happens a little at a time instead of in a ritual nobody runs.
+func Due(dir string, n int, opt Options) (due []DueClaim, unchecked int) {
+	lead := filepath.Join(dir, pack.MetaDir)
+	brief, err := meta.Read(filepath.Join(lead, pack.Brief))
+	if err != nil || brief.Front["status"] == "frozen" {
+		return nil, 0
+	}
+	var all []DueClaim
+	collect := func(d *meta.Doc, sections ...string) {
+		rel, _ := filepath.Rel(dir, d.Path)
+		for _, c := range d.Claims(sections...) {
+			if c.How == "" {
+				unchecked++
+				continue
+			}
+			all = append(all, DueClaim{File: filepath.ToSlash(rel), Claim: c})
+		}
+	}
+	collect(brief, briefClaimSections...)
+	if d, err := meta.Read(filepath.Join(lead, pack.Local, pack.Instance)); err == nil {
+		collect(d, instanceSections...)
+	}
+	cutoff := opt.today().Add(-DueDays * 24 * time.Hour).Format(meta.DateLayout)
+	all = slices.DeleteFunc(all, func(c DueClaim) bool { return c.Seen != "" && c.Seen >= cutoff })
+	// "" sorts before any date, so never-seen claims come first.
+	slices.SortStableFunc(all, func(a, b DueClaim) int { return strings.Compare(a.Seen, b.Seen) })
+	if len(all) > n {
+		all = all[:n]
+	}
+	return all, unchecked
 }

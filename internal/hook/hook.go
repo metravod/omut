@@ -126,6 +126,7 @@ func startProject(dir string) string {
 		b.WriteString("\n## Unfinished threads\n\n")
 		b.WriteString(strings.Join(open, "\n") + "\n")
 	}
+	writeDue(&b, dir)
 	return b.String()
 }
 
@@ -148,6 +149,37 @@ func writeUnrecorded(b *strings.Builder, dir string) {
 }
 
 const timeLayout = "2006-01-02 15:04"
+
+// dueClaims is how many claims an agent is asked to check per session.
+const dueClaims = 2
+
+// writeDue asks the agent to check the claims about where the project
+// lives that were seen longest ago (D11): omut remembers how to check
+// them and when it was done, the agent does it.
+func writeDue(b *strings.Builder, dir string) {
+	due, unchecked := check.Due(dir, dueClaims, check.Options{})
+	if len(due) == 0 && unchecked == 0 {
+		return
+	}
+	b.WriteString("\n## Check while you are here\n\n")
+	if len(due) > 0 {
+		b.WriteString("Claims about where the project lives, the longest unchecked first. Run each `how` (ask the human first where it touches servers or anything outside this directory) and compare with the claim. If it holds, set its `seen` to today. If it doesn't, tell the human and fix the line with them. Note what you saw, not just \"checked\", in `.omut/local/log.md`.\n")
+		for _, c := range due {
+			seen := "never"
+			if c.Seen != "" {
+				seen = c.Seen
+			}
+			fmt.Fprintf(b, "- `%s:%d` %s · how: `%s` · seen %s\n", c.File, c.Line, c.Text, c.How, seen)
+		}
+	}
+	if unchecked > 0 {
+		what := fmt.Sprintf("%d claims about where the project lives say no way to check them", unchecked)
+		if unchecked == 1 {
+			what = "1 claim about where the project lives says no way to check it"
+		}
+		fmt.Fprintf(b, "%s. When you know how, add ` · how: <command or place to look>` to the line.\n", what)
+	}
+}
 
 // writeInstance adds the instance layer (D15) when it says anything:
 // this copy's footprint, access and runbook, and its latest events.

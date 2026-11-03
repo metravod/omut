@@ -52,7 +52,11 @@ Frontmatter: `status` (`active` | `parked` | `done` | `dropped`), `updated`, `by
 
 Body: `# Title`, then the lines `**Goal:**`, `**Where we got:**`, `**Verified:**` / `**Not verified:**`, `**Open:**`, `**Next step:**`.
 
-**`local/instance.md`: this copy's memory.** Not in git. Frontmatter: `updated`, `verified` (when its footprint was last checked against reality), `by`. Sections: **Where it lives** (this machine, servers, containers, cron, data, backups, with dates), **Access** (where the secrets, tokens and accounts are kept, never the values), **Runbook** (deploy, roll back, restart, move). `local/log.md` is this copy's events in the log format: deployed, moved, rotated a token.
+**`local/instance.md`: this copy's memory.** Not in git. Frontmatter: `updated`, `by`. Sections: **Where it lives** (this machine, servers, containers, cron, data, backups, with dates), **Access** (where the secrets, tokens and accounts are kept, never the values), **Runbook** (deploy, roll back, restart, move). `local/log.md` is this copy's events in the log format: deployed, moved, rotated a token.
+
+**Claims about reality.** Every `- ` line of "Where it lives" (in `brief.md` and `local/instance.md`) and of "Access" is a claim. Give it a way to check it and the date it was last checked:
+`- skill adr: ~/.claude/skills/adr → this checkout · how: readlink ~/.claude/skills/adr · seen 2026-11-03`
+`how` is a command or a place to look; omut never runs it, an agent does. `check` warns about a claim not seen for 30 days and counts the claims without `how`; at session start the agent is offered the claims seen longest ago.
 
 **`log.md`: history, newest first.**
 `- 2026-10-31 · claude-code/opus-5.5 · What was done; verified: how → link`
@@ -61,6 +65,8 @@ One or two lines per session, details by link to a thread or a decision. The aut
 ### Rituals
 
 - **Session start.** Read `brief.md`, the `active` and `parked` threads, the `open` and `doubted` decisions. If a thread says "Verified", rerun that check before continuing.
+- **Checking a claim.** Run its `how` (ask the human first where it touches servers or anything outside this directory) and compare with the claim. It holds: set `seen` to today. It doesn't: tell the human and fix the line with them, never silently. Note in `local/log.md` what you saw, not just "checked".
+- **Looking for the footprint** (adopting, moving, "is anything else running?"). Search for the project's path and name where footprints hide: agents' skills (`~/.claude/skills`, `~/.codex/skills`, `~/.agents/skills`), MCP configs (`~/.claude.json`, `.mcp.json`, `~/.codex/config.toml`, `~/.cursor/mcp.json`), agents' settings and memory kept by path (`~/.claude/settings.json`, `~/.claude/projects/`), binaries and tool installs (`~/.local/bin`, `uv tool list`, `pipx list`, `brew list`, `npm ls -g`), services and schedules (`crontab -l`, `~/Library/LaunchAgents`, `systemctl --user list-units`), containers (`docker ps -a`, compose files), shell profiles (aliases, `PATH`). Anything found that is not written down goes to `local/instance.md`, or to the human.
 - **A decision is made.** An ADR, if the project keeps them; a line in `decisions.md` otherwise.
 - **A piece of work is done, or parked.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md` (more work the same session extends that line); what changed in this copy only (a deploy, a move, an install) goes to `local/instance.md` and `local/log.md`. Do it before you tell the human the work is done, and before a commit: an agent doesn't see the session end, so waiting for it means never. The result must be checkable: what was done, what was verified and how, what was not verified, the next step.
 - **Moving the project.** The meta moves with the directory; what breaks is outside it: symlinks into it, absolute paths in agents' settings and permission rules, virtualenvs, agents' memory kept by path, cron and services. Go through "Where it lives" in `local/instance.md`, search for the old path, fix what you can and show the human the rest; record the move there and in `local/log.md`.

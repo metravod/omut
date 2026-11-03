@@ -132,3 +132,21 @@ func TestSetFrontKeepsComment(t *testing.T) {
 		t.Error("SetFront on a missing key must fail")
 	}
 }
+
+func TestClaims(t *testing.T) {
+	d := Parse("brief.md", "## Where it lives\n- PyPI: zymi-core 0.9.3 · how: `pip index versions zymi-core` · seen 2026-11-03\n- a VPS · seen 2026-10-01\n  prose under it\n- GitHub · public · how: gh repo view\n## Now\n- not a claim · how: x\n")
+	got := d.Claims("Where it lives")
+	want := []Claim{
+		{2, "PyPI: zymi-core 0.9.3", "pip index versions zymi-core", "2026-11-03"},
+		{3, "a VPS", "", "2026-10-01"},
+		{5, "GitHub · public", "gh repo view", ""},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("claims: %+v", got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("claim %d: %+v, want %+v", i, got[i], want[i])
+		}
+	}
+}

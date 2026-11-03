@@ -1,6 +1,6 @@
 # Checking the meta against reality (D11)
 
-A research note as of 2026-11-03, for D11 and D15. Nothing here is decided. The section "Two layers" was added the same day, after the human pointed out that the variants mixed two different jobs; read it first. The question: how does omut check that "Where it lives" and "Now" are true, not only that they are well-formed and recently edited? This is what sets omut apart (spec §1), and today it is prose in `LEAD.md` ("Audit") and one `verified:` date per brief.
+A research note as of 2026-11-03, for D11 and D15. **Decided the same day:** D15 (two layers) and D11 in its simplest form: omut keeps each claim's `how` and `seen`, agents run the checks (variants 1, 5 and 9 below, with discovery as a checklist for agents rather than a command). The rest is kept as the map of what was considered. The section "Two layers" was added the same day, after the human pointed out that the variants mixed two different jobs; read it first. The question: how does omut check that "Where it lives" and "Now" are true, not only that they are well-formed and recently edited? This is what sets omut apart (spec §1), and today it is prose in `LEAD.md` ("Audit") and one `verified:` date per brief.
 
 ## What the claims actually are
 

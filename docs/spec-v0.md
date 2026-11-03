@@ -37,6 +37,7 @@ The meta can be checked. The lead doesn't just read what is written, it compares
 - Not the working memory of the current task. That is another layer, such as planning-with-files.
 - Doesn't store the user's personal preferences. That is a particular agent's memory.
 - Automates nothing by itself. The rituals rest on discipline; cron and hooks can be bolted on from outside.
+- Doesn't run checks against reality. It remembers what each claim says, how to check it and when that was last done; agents run the checks, with the human's permissions (D11).
 
 ## 4. Layout
 
@@ -133,7 +134,6 @@ Headings, field names and labels are fixed because `check` looks for them. The t
 ```markdown
 ---
 updated: 2026-11-03
-verified: 2026-11-03        # when this copy's footprint was checked against reality
 by: claude-code/opus-5.5
 ---
 ## Where it lives
@@ -146,7 +146,16 @@ Where the secrets, tokens and accounts are kept: a path, a password manager entr
 How this copy is deployed, rolled back, restarted, moved.
 ```
 
-No section is required: a copy that runs nowhere but in its directory leaves them empty. `local/log.md` holds this copy's events (deployed, moved, rotated a token) in the log format. `hook start` gives an agent both layers; a reader on GitHub sees only the project layer.
+No section is required: a copy that runs nowhere but in its directory leaves them empty.
+
+**Claims (D11).** Each `- ` line of "Where it lives" (in `brief.md` and in `local/instance.md`) and of "Access" is a claim about reality. It may carry how to check it and when that was last done:
+
+```markdown
+- skill adr: ~/.claude/skills/adr → this checkout · how: readlink ~/.claude/skills/adr · seen 2026-11-03
+- container wimt-agent on workhorse, image wimt_agent:62b9ca0 · how: ssh workhorse docker inspect -f '{{.Config.Image}}' wimt-agent · seen 2026-11-02
+```
+
+`how` is a command or a place to look. omut never runs it: the agent does, under its own permissions, and updates `seen`. omut keeps the memory: what is claimed, how to check it, how old the check is. `check` warns about claims not seen for 30 days (`unseen`) and counts those without `how` (`unchecked`); `hook start` offers the agent up to two claims not seen for 7 days, never-seen first, so the audit happens a little every session. The truth still rests on the agent; a `local/log.md` line that says what was seen, not just "checked", is the evidence. `local/log.md` holds this copy's events (deployed, moved, rotated a token) in the log format. `hook start` gives an agent both layers; a reader on GitHub sees only the project layer.
 
 ### decisions.md: the decision registry
 
@@ -231,7 +240,9 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | `shape` | error | a missing required frontmatter field or section, a wrong status, a repeated Dn, a broken link |
 | `size` | warn | `brief.md` > 60 lines, a thread > 80 lines, `log.md` > 50 entries (time to rotate) |
 | `stale-brief` | warn | the project has changes newer than `updated`, `.omut/` aside. With git: the last commit that touched anything outside `.omut/`, plus the mtimes of changed and untracked files (a fresh clone is not a change). Without git: the mtime of files outside hidden directories. A symlinked project is followed to its target |
-| `unverified` | warn | an active project whose `verified` is empty or older than 30 days; the same for `local/instance.md` once its "Where it lives" says anything |
+| `unverified` | warn | an active project whose `verified` is empty or older than 30 days |
+| `unseen` | warn | in an active project, a claim with `how` whose `seen` is missing or older than 30 days (§5) |
+| `unchecked` | info | claims without `how`, counted per file |
 | `stalled-thread` | info | an `active` thread not updated for more than 14 days |
 | `open-decision` | info | `open` and `doubted` decisions, and ADRs that wait in the same sense (§5): a list for the human. Not listed for a frozen project: its questions wait for a thaw |
 | `frozen-but-live` | warn | `frozen`, but "Where it lives" in the brief or in `local/instance.md` is not empty |
@@ -257,6 +268,8 @@ The rituals are written in the tool files. Any agent carries them out.
 - **A decision is made.** An ADR, if the project keeps them; a line in `decisions.md` otherwise.
 - **A piece of work is done, or parked.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md`, before telling the human the work is done and before a commit; what changed only in this copy goes to `local/`. Not "at session end": no agent sees it. The result must be checkable: what was done, what was verified and how, what was not, the next step.
 - **Moving the project.** The meta moves with the directory; what breaks is outside it (symlinks into it, absolute paths in agents' settings, virtualenvs, agents' memory kept by path, cron). Go through "Where it lives", search for the old path, record the move.
+- **Checking a claim.** Run its `how`, compare, update `seen`; a mismatch goes to the human. Note what was seen in `local/log.md`.
+- **Looking for the footprint** when adopting or moving, or to confirm "nothing else runs": search the places footprints hide (agents' skills, MCP configs, agents' settings and memory, tool installs, cron and launchd/systemd, containers, shell profiles); the list is in `.omut/README.md`.
 - **Freezing.** A final "Now", a log line, check "Where it lives", then `freeze`.
 
 **In the root** (`LEAD.md`):

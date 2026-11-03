@@ -189,6 +189,9 @@ func project(base, dir, name string, opt Options, dead []string) []Finding {
 		}
 	}
 	active := brief == nil || brief.Front["status"] != "frozen"
+	if brief != nil && active {
+		checkClaims(r, brief, opt, briefClaimSections...)
+	}
 	checkInstance(r, dir, opt, active)
 	checkLeak(r, lead)
 	checkReadme(r, lead, name)
