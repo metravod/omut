@@ -2,55 +2,86 @@
 
 [![omut](https://github.com/metravod/omut/actions/workflows/omut.yml/badge.svg?branch=main)](.omut/) [![ci](https://github.com/metravod/omut/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/metravod/omut/actions/workflows/ci.yml)
 
-A pack of projects that any agent can tell the truth about. Short meta in every project, carrying its own rules, and a check that what is written still matches reality. Works for a single repository too.
+Project memory that any agent can read, keep and check. A few plain markdown files next to the code say why the project exists, what was decided, what is unfinished and where it actually runs; a small CLI checks that they are filled in and fresh.
 
 > *Omut pamyati* is the Russian name of Dumbledore's Pensieve: you dip into someone's memories and see how it really was.
 
-Status: v0, the first working CLI.
+Status: v0.4, early and used daily on a real pack of projects. Questions and stories of how it went: [Discussions](https://github.com/metravod/omut/discussions).
 
 ## Why
 
-Agents build the projects, and you stop remembering what is where and why. Something runs on a server for half a year though it was meant for a week. A project moves from Claude Code to Codex, or to a colleague, and the new agent digs through the code to find out what was decided and what comes next.
+Agents build the projects, and you stop remembering what is where and why. Something runs on a server for half a year though it was meant for a week. A project moves from Claude Code to Codex, or to a colleague, or back to you three months later, and the new reader digs through the code to find out what was decided and what comes next.
 
-omut keeps a few plain markdown files next to each project: a brief (why, what it is, where it lives, now, next), a decision registry, threads of work and a log. Any agent that reads `AGENTS.md` can keep them. The CLI only lays down templates and checks the shape and freshness of what agents wrote.
+omut keeps the answers next to the project, in files any agent that reads `AGENTS.md` can keep: no server, no database, no vendor. The CLI never writes the meaning itself; it lays down templates and checks the shape and freshness of what agents wrote.
 
-## How it looks
+## Quick start
+
+```sh
+brew install metravod/tap/omut
+cd my-project && omut start
+```
+
+Then tell your agent: *"adopt this project following .omut/README.md"*. It reads the code, git history and old notes, fills the brief and the decisions, and asks you what the sources don't say. From then on it keeps the meta as it works: the rules travel inside the repository, so the next agent finds them without omut installed.
+
+Two optional steps:
+- **Load the meta at every session start** (Claude Code, in `~/.claude/settings.json`; recipes for Codex, Cursor and git in [docs/hooks.md](docs/hooks.md)):
+  ```json
+  { "hooks": { "SessionStart": [{ "matcher": "startup|resume|clear|compact",
+      "hooks": [{ "type": "command", "command": "omut hook start --agent claude" }] }] } }
+  ```
+- **The badge.** In a public GitHub repository `omut start` prints a badge for `README.md`: it links readers to `.omut/` and stays green while CI finds the meta fresh, not only well-formed ([workflow](docs/hooks.md#ci-and-the-badge)). This repository wears one.
+
+## What it lays down
+
+```
+my-project/
+  AGENTS.md              # your rules + a short omut block (CLAUDE.md → AGENTS.md)
+  .omut/
+    README.md            # the rules, for agents and people (the tool's file)
+    brief.md             # why · what it is · where it lives · now · next, at most 60 lines
+    decisions.md         # - D3 [open] Keep collecting after the week? → threads/hn-future.md
+    threads/             # unfinished work, each with its next step
+    log.md               # - 2026-10-31 · codex/gpt-5 · what was done → link
+    local/               # this copy only, never in git (see below)
+      instance.md        # this machine, servers, where the secrets are kept, the runbook
+      log.md             # deployed, moved, rotated a token
+```
+
+**Two layers.** Everything except `local/` goes into git and to everyone who clones: why, what, decisions, the work. `local/` is the memory of your copy, like `.env`: paths on this machine, servers, cron, where the tokens are kept (never the values), how to deploy and roll back. The test for a fact: would a stranger who clones need it, and is it true for them? `omut check` warns when a home path or an IP address slips into the shared layer.
+
+**Claims about reality.** A line about where the project lives says how to check it and when it was last seen:
+
+```
+- bot on VPS, systemd unit hn-bot · how: ssh vps systemctl is-active hn-bot · seen 2026-10-28
+```
+
+omut never runs it. At session start it offers the agent the claims seen longest ago; the agent checks, updates the date, and brings any mismatch to you instead of fixing it silently. `check` warns about checkable claims nobody has looked at for a month.
+
+If the project keeps ADRs, they stay the decision registry: point the brief at them (`adr: docs/adr`) and their statuses are read as they are.
+
+## A pack of projects
+
+Most people have more than one. A directory of projects can become a pack with a lead:
 
 ```sh
 cd ~/projects && omut init      # the pack root: AGENTS.md, .omut/LEAD.md, pack meta
-omut start hn-parser            # adopt a directory: .omut/ templates and rules, a block in AGENTS.md
-omut check                      # what is stale, what is unfilled, which decisions wait
+omut start hn-parser            # adopt a directory in the pack
+omut check                      # across the pack: what is stale, unfilled, waiting for you
 ```
 
-Agents do the rest: Claude Code, Codex, or anything else that reads `AGENTS.md`. Started in the root, an agent is the lead: it knows the whole pack and tells you what is where. Started in a project, it keeps that project's meta.
-
-```
-~/projects/
-  AGENTS.md              # your rules + the omut block
-  .omut/                 # the lead's instructions, pack focus, decisions, graveyard
-  hn-parser/
-    AGENTS.md
-    .omut/
-      README.md          # what this is, how to read it, the rules (the tool's)
-      brief.md           # why · what it is · where it lives · now · next
-      decisions.md       # - D3 [open] Keep collecting after the week? → threads/hn-future.md
-      threads/           # unfinished work, with the next step
-      log.md             # - 2026-10-31 · codex/gpt-5 · what was done → link
-```
+An agent started in the root is the lead: it knows the whole pack and tells you what is where. Started in a project, it keeps that project's meta.
 
 | Command | What it does |
 |---|---|
 | `init [dir]` | create a pack |
 | `start [project]` | a new project, or adopt an existing directory |
 | `freeze` / `thaw [project]` | freeze / unfreeze |
-| `kill <project> --yes --reason "..."` | remove, write a tombstone, list the mentions |
-| `check [project] [--json]` | the report; non-zero exit on shape errors |
+| `kill <project> --yes --reason "..."` | remove, write a tombstone, list the mentions; refuses over unsaved work |
+| `check [project] [--json] [--fail-on warn]` | the report; non-zero exit on shape errors |
 | `zero [project]` | repair the scaffold, update the tool files |
-| `hook start\|commit` | for hooks: session context for agents, a git pre-commit reminder ([recipes](docs/hooks.md)) |
+| `hook start\|commit` | session context for agents, a git pre-commit reminder ([recipes](docs/hooks.md)) |
 
-No pack? In a single repository `omut start` gives it the same meta, rules included, and `check`, `zero`, `freeze` and `thaw` work on that directory.
-
-The templates are plain markdown in [`templates/`](templates/), so a pack can be set up by hand too.
+`check`, `zero`, `freeze` and `thaw` work on a single repository without a pack. The templates are plain markdown in [`templates/`](templates/), so all of it can be set up by hand too.
 
 ## Install
 
@@ -64,22 +95,16 @@ Or with Go:
 go install github.com/metravod/omut/cmd/omut@latest
 ```
 
-Binaries for macOS, Linux and Windows are on the [releases page](https://github.com/metravod/omut/releases).
-
-Or build from source:
-
-```sh
-go build ./cmd/omut
-go test ./...
-```
+Binaries for macOS, Linux and Windows are on the [releases page](https://github.com/metravod/omut/releases). From source: `go build ./cmd/omut && go test ./...` (Go standard library only).
 
 ## Docs
 
 - [Specification v0](docs/spec-v0.md)
 - [Hooks for git, CI, Claude Code, Codex, Cursor, and the badge](docs/hooks.md)
 - [Competitors and neighbours](docs/research/competitors.md)
+- [Checking the meta against reality: the variants weighed](docs/research/reality-check.md)
 
-This repo keeps its own meta by its own spec: see [`.omut/`](.omut/). The `omut` badge above is that meta's check in CI: green means fresh, not only well-formed.
+This repo keeps its own meta by its own spec: see [`.omut/`](.omut/).
 
 ## Credits
 
