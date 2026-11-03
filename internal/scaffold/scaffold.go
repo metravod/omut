@@ -26,8 +26,9 @@ type Result struct {
 }
 
 type Options struct {
-	By  string // who lays the files down, goes into `by:`
-	Now time.Time
+	By      string // who lays the files down, goes into `by:`
+	Now     time.Time
+	Private bool // start: keep the whole meta out of git (D16)
 }
 
 func (o Options) date() string {
@@ -104,6 +105,8 @@ func StartAt(dir string, opt Options) (*Result, error) {
 	}
 	info, err := os.Stat(dir)
 	switch {
+	case errors.Is(err, fs.ErrNotExist) && opt.Private:
+		return nil, fmt.Errorf("no directory %s: --private is for a repository that already exists", dir)
 	case errors.Is(err, fs.ErrNotExist):
 		if err := os.Mkdir(dir, 0o755); err != nil {
 			return nil, err
@@ -112,6 +115,20 @@ func StartAt(dir string, opt Options) (*Result, error) {
 		return nil, err
 	case !info.IsDir():
 		return nil, fmt.Errorf("%s is a file, not a directory", dir)
+	}
+	if opt.Private {
+		if _, err := os.Stat(filepath.Join(dir, pack.MetaDir)); err == nil && !pack.Private(dir) {
+			return nil, fmt.Errorf("%s has its meta in git already: --private would hide it from this copy only, while the repository keeps it; remove .omut/ from git first if that is what you want", filepath.Base(dir))
+		}
+		changed, err := pack.ExcludePrivate(dir)
+		if err != nil {
+			return nil, err
+		}
+		res, err := zeroProject(dir, opt)
+		if res != nil && changed {
+			res.Updated = append(res.Updated, ".git/info/exclude (.omut/, CLAUDE.local.md)")
+		}
+		return res, err
 	}
 	return zeroProject(dir, opt)
 }
@@ -135,6 +152,7 @@ func zeroProject(dir string, opt Options) (*Result, error) {
 	// The template is "gitignore": go:embed leaves out files whose name
 	// starts with a dot.
 	w.tool("project/omut/gitignore", filepath.Join(pack.MetaDir, pack.Ignore))
+	w.tool("project/omut/gitattributes", filepath.Join(pack.MetaDir, pack.Attributes))
 	for _, file := range projectMeta {
 		w.meta("project/omut/"+file, filepath.Join(pack.MetaDir, file))
 	}
@@ -142,9 +160,21 @@ func zeroProject(dir string, opt Options) (*Result, error) {
 		w.meta("project/omut/local/"+file, filepath.Join(pack.MetaDir, pack.Local, file))
 	}
 	w.mkdir(filepath.Join(pack.MetaDir, pack.Threads))
+	// Private meta (D16) leaves the repository's own files alone: the
+	// pointer goes to CLAUDE.local.md, which git ignores too, unless
+	// AGENTS.md carries the omut block already.
+	if pack.Private(dir) && !hasBlock(w.path(pack.Agents)) {
+		w.blockIn("project/block.md", pack.ClaudeLocal)
+		return res, w.err
+	}
 	w.block("project/block.md")
 	w.claudeLink()
 	return res, w.err
+}
+
+func hasBlock(path string) bool {
+	b, err := os.ReadFile(path)
+	return err == nil && strings.Contains(string(b), pack.BlockStart)
 }
 
 // writer collects the first error so the steps read as a plain list.
@@ -225,18 +255,20 @@ func (w *writer) meta(tmpl, rel string) {
 	}
 }
 
-func (w *writer) block(tmpl string) {
+func (w *writer) block(tmpl string) { w.blockIn(tmpl, pack.Agents) }
+
+func (w *writer) blockIn(tmpl, file string) {
 	if w.err != nil {
 		return
 	}
-	created, changed, err := UpsertBlock(w.path(pack.Agents), w.render(tmpl))
+	created, changed, err := UpsertBlock(w.path(file), w.render(tmpl))
 	switch {
 	case err != nil:
 		w.err = err
 	case created:
-		w.res.Created = append(w.res.Created, pack.Agents)
+		w.res.Created = append(w.res.Created, file)
 	case changed:
-		w.res.Updated = append(w.res.Updated, pack.Agents+" (omut block)")
+		w.res.Updated = append(w.res.Updated, file+" (omut block)")
 	}
 }
 

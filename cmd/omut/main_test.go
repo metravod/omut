@@ -774,3 +774,123 @@ func TestClaimsAreCheckedByAgents(t *testing.T) {
 		t.Errorf("a frozen project is asked to check claims:\n%s", out)
 	}
 }
+
+func gitOut(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, out)
+	}
+	return string(out)
+}
+
+func TestPrivateMetaLeavesTheRepoAlone(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("no git")
+	}
+	if _, err := omut(t, t.TempDir(), "start", "--private"); err == nil {
+		t.Error("--private outside git: no error")
+	}
+
+	dir := t.TempDir()
+	name := filepath.Base(dir)
+	git(t, dir, "init", "-q")
+	write(t, filepath.Join(dir, "README.md"), "# theirs\n")
+	git(t, dir, "add", "-A")
+	git(t, dir, "commit", "-qm", "init")
+
+	out := must(t, dir, "start", "--private")
+	if !strings.Contains(out, "The meta is private") || strings.Contains(out, "badge") {
+		t.Errorf("start --private said:\n%s", out)
+	}
+	for _, f := range []string{"AGENTS.md", "CLAUDE.md"} {
+		if _, err := os.Lstat(filepath.Join(dir, f)); err == nil {
+			t.Errorf("--private created %s in their repository", f)
+		}
+	}
+	if !strings.Contains(read(t, filepath.Join(dir, "CLAUDE.local.md")), "<!-- omut:start -->") {
+		t.Error("no omut block in CLAUDE.local.md")
+	}
+	if st := gitOut(t, dir, "status", "--porcelain", "--untracked-files=all"); st != "" {
+		t.Errorf("the repository changed:\n%s", st)
+	}
+	if ex := read(t, filepath.Join(dir, ".git/info/exclude")); !strings.Contains(ex, "/.omut/\n") || !strings.Contains(ex, "/CLAUDE.local.md\n") {
+		t.Errorf(".git/info/exclude:\n%s", ex)
+	}
+	must(t, dir, "start", "--private") // twice: the exclude lines are not repeated
+	if n := strings.Count(read(t, filepath.Join(dir, ".git/info/exclude")), "/.omut/"); n != 1 {
+		t.Errorf("/.omut/ is in .git/info/exclude %d times", n)
+	}
+
+	write(t, filepath.Join(dir, ".omut/brief.md"), fill(time.Now().Format("2006-01-02"), time.Now().Format("2006-01-02"), "- checkout in /Users/someone/work/theirs"))
+	fs := findings(t, dir)
+	for _, rule := range []string{"pointer", "leak"} {
+		if has(fs, name, rule) {
+			t.Errorf("private meta got %s: %+v", rule, fs)
+		}
+	}
+	hookOut, _, _ := hookRun(t, dir, "", "start")
+	if !strings.Contains(hookOut, "The meta is this copy's only") {
+		t.Errorf("hook start does not say the meta is private:\n%s", hookOut)
+	}
+	must(t, dir, "zero")
+	if _, err := os.Lstat(filepath.Join(dir, "AGENTS.md")); err == nil {
+		t.Error("zero created AGENTS.md in a private project")
+	}
+	os.Remove(filepath.Join(dir, "CLAUDE.local.md"))
+	if fs := findings(t, dir); !has(fs, name, "pointer") {
+		t.Errorf("private meta without CLAUDE.local.md: no pointer warning: %+v", fs)
+	}
+
+	// Sharing it later: drop the exclude lines, zero, commit.
+	write(t, filepath.Join(dir, ".git/info/exclude"), "")
+	must(t, dir, "zero")
+	if !strings.Contains(read(t, filepath.Join(dir, "AGENTS.md")), "<!-- omut:start -->") {
+		t.Error("zero after sharing: no omut block in AGENTS.md")
+	}
+	git(t, dir, "add", "-A")
+	git(t, dir, "commit", "-qm", "share the meta")
+	if _, err := omut(t, dir, "start", "--private"); err == nil {
+		t.Error("--private over meta already in git: no error")
+	}
+
+	// A project in a subdirectory of the repository.
+	sub := filepath.Join(dir, "tools", "bot")
+	write(t, filepath.Join(sub, "main.go"), "package main\n")
+	must(t, sub, "start", "--private")
+	if ex := read(t, filepath.Join(dir, ".git/info/exclude")); !strings.Contains(ex, "/tools/bot/.omut/\n") {
+		t.Errorf("exclude for a subdirectory:\n%s", ex)
+	}
+}
+
+func TestParallelLogLinesMerge(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("no git")
+	}
+	dir := t.TempDir()
+	git(t, dir, "init", "-q")
+	must(t, dir, "start")
+	log := filepath.Join(dir, ".omut/log.md")
+	write(t, log, "- 2026-11-01 · human · started\n")
+	git(t, dir, "add", "-A")
+	git(t, dir, "commit", "-qm", "start")
+	main := strings.TrimSpace(gitOut(t, dir, "branch", "--show-current"))
+
+	git(t, dir, "checkout", "-qb", "anna")
+	write(t, log, "- 2026-11-03 · claude-code/opus · anna's work\n- 2026-11-01 · human · started\n")
+	git(t, dir, "commit", "-qam", "anna")
+	git(t, dir, "checkout", "-q", main)
+	write(t, log, "- 2026-11-03 · codex/gpt-5 · boris's work\n- 2026-11-01 · human · started\n")
+	git(t, dir, "commit", "-qam", "boris")
+
+	git(t, dir, "merge", "-q", "--no-edit", "anna")
+	got := read(t, log)
+	for _, want := range []string{"anna's work", "boris's work", "started"} {
+		if strings.Count(got, want) != 1 {
+			t.Errorf("after the merge the log has %q %d times:\n%s", want, strings.Count(got, want), got)
+		}
+	}
+	if fs := findings(t, dir); has(fs, filepath.Base(dir), "shape") {
+		t.Errorf("merged log out of shape: %+v", fs)
+	}
+}

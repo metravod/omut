@@ -67,6 +67,9 @@ func startProject(dir string) string {
 	fmt.Fprintf(&b, "# omut: the meta of %s\n\n", filepath.Base(dir))
 	b.WriteString("This project keeps its meta in `.omut/` (rules: `.omut/README.md`). Below is what to read at the start. When a piece of work is done, record it before you tell the human it is done: a line at the top of `.omut/log.md`, \"Now\" in `.omut/brief.md`, a thread for what is left. You won't see the session end, so don't wait for it.\n")
 
+	if pack.Private(dir) {
+		b.WriteString("\nThe meta is this copy's only: git ignores `.omut/` (`omut start --private`), and it stays out of commits. Don't `git add -f` it.\n")
+	}
 	writeUnrecorded(&b, dir)
 	writeFindings(&b, check.Dir(dir, check.Options{}), false)
 

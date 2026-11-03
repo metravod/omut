@@ -22,7 +22,8 @@ const usage = `omut: meta for a pack of projects that any agent can read and che
 
 Commands:
   init [dir]                           create a pack (in the current directory by default)
-  start [project]                      a new project, or adopt an existing directory
+  start [project] [--private]          a new project, or adopt an existing directory
+                                       (--private: the meta stays out of git, for a repository that is not yours)
   freeze [project]                     status: frozen
   thaw [project]                       status: active
   kill <project> --yes --reason "..."  remove a project, write a tombstone (--force: even with unsaved work)
@@ -162,6 +163,7 @@ func target(pos []string) (p *pack.Pack, dir, name string, err error) {
 func cmdStart(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("start", flag.ContinueOnError)
 	by := byFlag(fs)
+	private := fs.Bool("private", false, "keep the whole meta out of git, through .git/info/exclude (a repository that is not yours)")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
@@ -170,7 +172,7 @@ func cmdStart(args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	res, err := scaffold.StartAt(dir, scaffold.Options{By: *by})
+	res, err := scaffold.StartAt(dir, scaffold.Options{By: *by, Private: *private})
 	if err != nil {
 		return err
 	}
@@ -187,11 +189,21 @@ func cmdStart(args []string, out io.Writer) error {
 	}
 	printResult(out, res)
 	fmt.Fprintf(out, "\nFill in %s/.omut/brief.md following \"Adopting a project\" in %s/.omut/README.md.\n", name, name)
+	if pack.Private(dir) {
+		fmt.Fprint(out, privateNote)
+		return nil
+	}
 	if b := badge(dir); b != "" {
 		fmt.Fprintf(out, "\nThe repository is on GitHub. If it is public, offer the human the omut badge for README.md: it links readers to .omut/ and turns green while CI finds the meta fresh (workflow: %s).\n  %s\n", badgeRecipe, b)
 	}
 	return nil
 }
+
+const privateNote = `
+The meta is private: git ignores .omut/ and CLAUDE.local.md through .git/info/exclude, and the repository's own files are unchanged. Claude Code finds the meta through CLAUDE.local.md. Codex has no local file that adds to AGENTS.md: give it the session-start hook (https://github.com/metravod/omut/blob/main/docs/hooks.md#codex) or this line in ~/.codex/AGENTS.md:
+  If the repository has .omut/, keep its meta by .omut/README.md.
+To share the meta later: remove the omut lines from .git/info/exclude, run omut zero, commit .omut/.
+`
 
 func cmdStatus(args []string, out io.Writer, status string) error {
 	fs := flag.NewFlagSet(status, flag.ContinueOnError)

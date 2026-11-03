@@ -26,6 +26,8 @@ cd my-project && omut start
 
 Then tell your agent: *"adopt this project following .omut/README.md"*. It reads the code, git history and old notes, fills the brief and the decisions, and asks you what the sources don't say. From then on it keeps the meta as it works: the rules travel inside the repository, so the next agent finds them without omut installed.
 
+Not your repository? See [On a repository that is not yours](#on-a-repository-that-is-not-yours).
+
 Two optional steps:
 - **Load the meta at every session start** (Claude Code, in `~/.claude/settings.json`; recipes for Codex, Cursor and git in [docs/hooks.md](docs/hooks.md)):
   ```json
@@ -33,6 +35,20 @@ Two optional steps:
       "hooks": [{ "type": "command", "command": "omut hook start --agent claude" }] }] } }
   ```
 - **The badge.** In a public GitHub repository `omut start` prints a badge for `README.md`: it links readers to `.omut/` and stays green while CI finds the meta fresh, not only well-formed ([workflow](docs/hooks.md#ci-and-the-badge)). This repository wears one.
+
+## On a repository that is not yours
+
+A work project, a team that doesn't use omut yet, someone else's open source: you can't commit `.omut/` there, but your agents still forget what they learned yesterday. Keep the meta for yourself:
+
+```sh
+cd their-repo && omut start --private
+```
+
+- `.omut/` and `CLAUDE.local.md` go into `.git/info/exclude`, which is never committed. The repository's own files, `AGENTS.md` and `.gitignore` included, don't change by a byte: `git status` stays empty.
+- Claude Code finds the meta through `CLAUDE.local.md`. Codex has no local file that adds to `AGENTS.md`, so give it the [session-start hook](docs/hooks.md#codex) or one line in `~/.codex/AGENTS.md`: *If the repository has .omut/, keep its meta by .omut/README.md.*
+- Everything else works as usual: `check`, `hook start`, the claims. The agent is told the meta is private and stays out of commits.
+
+When the team sees what it gives, share it: remove the omut lines from `.git/info/exclude`, run `omut zero` (it writes the block into `AGENTS.md`), move what is true only for your copy into `.omut/local/`, and commit `.omut/`. Same format, nothing to migrate.
 
 ## What it lays down
 
@@ -60,6 +76,8 @@ my-project/
 
 omut never runs it. At session start it offers the agent the claims seen longest ago; the agent checks, updates the date, and brings any mismatch to you instead of fixing it silently. `check` warns about checkable claims nobody has looked at for a month.
 
+**Working together.** One format for one person, a team and open source, no modes. Each piece of work has its own thread with one keeper; log lines from parallel branches merge without conflicts (`.omut/.gitattributes`); decisions name the human who accepted them.
+
 If the project keeps ADRs, they stay the decision registry: point the brief at them (`adr: docs/adr`) and their statuses are read as they are.
 
 ## A pack of projects
@@ -77,7 +95,7 @@ An agent started in the root is the lead: it knows the whole pack and tells you 
 | Command | What it does |
 |---|---|
 | `init [dir]` | create a pack |
-| `start [project]` | a new project, or adopt an existing directory |
+| `start [project] [--private]` | a new project, or adopt an existing directory; `--private` keeps the meta out of git |
 | `freeze` / `thaw [project]` | freeze / unfreeze |
 | `kill <project> --yes --reason "..."` | remove, write a tombstone, list the mentions; refuses over unsaved work |
 | `check [project] [--json] [--fail-on warn]` | the report; non-zero exit on shape errors |

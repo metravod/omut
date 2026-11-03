@@ -27,6 +27,8 @@ Headings, field names and labels stay as below: `check` looks for them. Write th
 
 The test for a fact: would a stranger who clones the repository need it, and is it true for them? If not, it goes to `local/`. `check` warns about home paths and IP addresses in the project layer.
 
+**Private meta.** When git ignores the whole `.omut/` (`omut start --private` puts it into `.git/info/exclude`, for a repository that is not yours), both layers are this copy's: nothing here is committed, so don't `git add -f` it, and `check` doesn't look for leaks. The pointer for agents is `CLAUDE.local.md`, ignored as well; the repository's `AGENTS.md` stays as it is. To share the meta later, the human removes the omut lines from `.git/info/exclude`, runs `omut zero` and commits `.omut/`; move this copy's facts to `local/` first.
+
 ### Files
 
 **`brief.md`: the project's brief. Always read, at most 60 lines.**
@@ -83,9 +85,16 @@ A project without meta (`omut start` creates the templates):
 - **If the repository is public on GitHub,** offer the human the omut badge for `README.md`: `omut start` prints it, with a link to the CI recipe.
 - **Project rules belong in `AGENTS.md`.** If they live in one agent's file (`CLAUDE.md` and the like), offer the human to move them to `AGENTS.md` and make the vendor file a pointer (`ln -s AGENTS.md CLAUDE.md`).
 
+### Working together
+
+Several people and agents can keep one project's meta in parallel branches:
+- Each piece of work has its own thread, kept by one agent or person at a time (`by`). Pick up someone else's thread only when it is `parked` or they hand it over.
+- Log lines from parallel branches merge on their own: `.omut/.gitattributes` tells git to keep both sides' lines. After a merge, check that the newest are on top.
+- `brief.md` and `decisions.md` conflict like code. Resolve by keeping both sides' facts. Two new decisions with the same number: the one merged later takes the next free number, and its links follow.
+- Decisions belong to the humans. With more than one, the line says who accepted it (`… accepted by Anna`), and an `open` decision names whom it waits for.
+
 ### Don't
 
-- Only one agent keeps a project's meta at a time. Parallel work needs an explicit split of responsibility.
 - Don't copy project artifacts (ADRs, plans, docs) into the meta; link to them.
 - Don't fix a mismatch between the record and reality silently; show it to the human.
 - Don't put this copy's facts into the project layer, and never secret values anywhere in the meta.

@@ -193,9 +193,15 @@ func project(base, dir, name string, opt Options, dead []string) []Finding {
 		checkClaims(r, brief, opt, briefClaimSections...)
 	}
 	checkInstance(r, dir, opt, active)
-	checkLeak(r, lead)
+	// Private meta (D16) is all this copy's: nothing in it goes to git,
+	// so nothing leaks, and the pointer is a local file.
+	if pack.Private(dir) {
+		checkPrivatePointer(r, dir)
+	} else {
+		checkLeak(r, lead)
+		checkPointer(r, dir)
+	}
 	checkReadme(r, lead, name)
-	checkPointer(r, dir)
 	if len(dead) > 0 {
 		checkGhosts(r, lead, name, dead)
 	}
@@ -552,6 +558,18 @@ func checkPointer(r *report, dir string) {
 		return
 	}
 	r.add("pointer", Warn, claude, 0, "Claude Code reads CLAUDE.md and will not see AGENTS.md: move the rules to AGENTS.md and make CLAUDE.md a symlink, or add an @AGENTS.md line to CLAUDE.md or CLAUDE.local.md")
+}
+
+// checkPrivatePointer: with the meta out of git, the omut block lives in
+// CLAUDE.local.md, or in AGENTS.md where the repository has it anyway.
+// Codex has no local file that adds to AGENTS.md; the hook covers it.
+func checkPrivatePointer(r *report, dir string) {
+	for _, f := range []string{pack.Agents, pack.ClaudeLocal} {
+		if b, err := os.ReadFile(filepath.Join(dir, f)); err == nil && strings.Contains(string(b), pack.BlockStart) {
+			return
+		}
+	}
+	r.add("pointer", Warn, filepath.Join(dir, pack.ClaudeLocal), 0, "the meta is private (git ignores .omut/), and no file an agent reads points at it: omut zero writes the omut block to CLAUDE.local.md")
 }
 
 func leadsToAgents(path string) bool {

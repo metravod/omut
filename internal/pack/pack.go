@@ -25,6 +25,7 @@ const (
 	Local       = "local" // the instance layer: this copy's own memory, never in git (D15)
 	Instance    = "instance.md"
 	Ignore      = ".gitignore"
+	Attributes  = ".gitattributes"
 	Agents      = "AGENTS.md"
 	Claude      = "CLAUDE.md"
 	ClaudeLocal = "CLAUDE.local.md"
