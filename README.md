@@ -17,7 +17,8 @@ omut keeps the answers next to the project, in files any agent that reads `AGENT
 ## Quick start
 
 ```sh
-brew install metravod/tap/omut       # or, on Linux, macOS and WSL without brew:
+brew install metravod/tap/omut
+# or without brew (Linux, macOS, WSL):
 curl -fsSL https://raw.githubusercontent.com/metravod/omut/main/install.sh | sh
 
 cd my-project && omut start
@@ -87,14 +88,28 @@ An agent started in the root is the lead: it knows the whole pack and tells you 
 
 ## Install
 
+macOS with Homebrew:
+
 ```sh
-brew install metravod/tap/omut                     # macOS, Homebrew
-curl -fsSL https://raw.githubusercontent.com/metravod/omut/main/install.sh | sh   # Linux, macOS, WSL
-mise use -g github:metravod/omut                   # mise
+brew install metravod/tap/omut
+```
+
+Linux, macOS and WSL without brew:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/metravod/omut/main/install.sh | sh
+```
+
+It takes the latest release for your OS and CPU, checks it against `checksums.txt` and puts `omut` into `~/.local/bin`; `OMUT_DIR=/usr/local/bin` or `OMUT_VERSION=0.4.1` before `sh` change that. The script is short: [read it](install.sh) before piping it to a shell.
+
+With [mise](https://mise.jdx.dev) (it takes a release once it is a day old, by its own default) or Go:
+
+```sh
+mise use -g github:metravod/omut
 go install github.com/metravod/omut/cmd/omut@latest
 ```
 
-`install.sh` takes the latest release for your OS and CPU, checks it against `checksums.txt` and puts `omut` into `~/.local/bin` (`OMUT_DIR` and `OMUT_VERSION` change that). mise takes a release only once it is a day old, by its own default. Binaries for macOS, Linux and Windows are on the [releases page](https://github.com/metravod/omut/releases); Windows itself is built but not yet tried, WSL works like Linux. From source: `go build ./cmd/omut && go test ./...` (Go standard library only).
+Binaries for macOS, Linux and Windows are on the [releases page](https://github.com/metravod/omut/releases); Windows itself is built but not yet tried, WSL works like Linux. From source: `go build ./cmd/omut && go test ./...` (Go standard library only).
 
 ## Docs
 
