@@ -19,3 +19,20 @@ jobs:
           go-version-file: go.mod
       - run: go vet ./...
       - run: go test ./...
+
+  # The ways to install without brew, against the latest release.
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install.sh with curl
+        run: OMUT_DIR="$RUNNER_TEMP/bin" sh install.sh && "$RUNNER_TEMP/bin/omut" --version
+      - name: install.sh with busybox wget, no curl
+        run: docker run --rm -v "$PWD:/src:ro" alpine:3.20 sh -c 'OMUT_DIR=/tmp/bin sh /src/install.sh && /tmp/bin/omut --version'
+      - name: mise
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          curl -fsSL https://mise.run | sh
+          ~/.local/bin/mise use -g github:metravod/omut
+          ~/.local/bin/mise exec github:metravod/omut -- omut --version

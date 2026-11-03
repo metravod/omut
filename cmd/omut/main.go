@@ -18,8 +18,6 @@ import (
 	"github.com/metravod/omut/internal/scaffold"
 )
 
-var version = "dev"
-
 const usage = `omut: meta for a pack of projects that any agent can read and check.
 
 Commands:
