@@ -17,10 +17,28 @@ func Private(dir string) bool {
 	if exec.Command("git", "-C", dir, "rev-parse", "--is-inside-work-tree").Run() != nil {
 		return false
 	}
-	if out, _ := exec.Command("git", "-C", dir, "ls-files", "--", MetaDir).Output(); len(out) > 0 {
+	if MetaTracked(dir) {
 		return false
 	}
 	return exec.Command("git", "-C", dir, "check-ignore", "-q", MetaDir+"/"+Brief).Run() == nil
+}
+
+// MetaTracked reports whether git tracks anything in dir's .omut/: committed,
+// or staged for a commit.
+func MetaTracked(dir string) bool {
+	out, _ := exec.Command("git", "-C", dir, "ls-files", "--", MetaDir).Output()
+	return len(out) > 0
+}
+
+// GitSees lists which of dir's files git reports as changed or untracked.
+func GitSees(dir string, files ...string) []string {
+	var seen []string
+	for _, f := range files {
+		if out, _ := exec.Command("git", "-C", dir, "status", "--porcelain", "--", f).Output(); len(out) > 0 {
+			seen = append(seen, f)
+		}
+	}
+	return seen
 }
 
 // ErrNoGit: --private hides the meta from git, so it needs git.

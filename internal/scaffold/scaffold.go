@@ -117,7 +117,7 @@ func StartAt(dir string, opt Options) (*Result, error) {
 		return nil, fmt.Errorf("%s is a file, not a directory", dir)
 	}
 	if opt.Private {
-		if _, err := os.Stat(filepath.Join(dir, pack.MetaDir)); err == nil && !pack.Private(dir) {
+		if pack.MetaTracked(dir) {
 			return nil, fmt.Errorf("%s has its meta in git already: --private would hide it from this copy only, while the repository keeps it; remove .omut/ from git first if that is what you want", filepath.Base(dir))
 		}
 		changed, err := pack.ExcludePrivate(dir)
@@ -127,6 +127,14 @@ func StartAt(dir string, opt Options) (*Result, error) {
 		res, err := zeroProject(dir, opt)
 		if res != nil && changed {
 			res.Updated = append(res.Updated, ".git/info/exclude (.omut/, CLAUDE.local.md)")
+			// Meta laid down earlier without --private becomes private as it
+			// is; what that start did to the repository's own files is the
+			// user's to undo.
+			if hasBlock(filepath.Join(dir, pack.Agents)) {
+				if seen := pack.GitSees(dir, pack.Agents, pack.Claude); len(seen) > 0 {
+					res.Notes = append(res.Notes, fmt.Sprintf("git still sees %s from an earlier omut start: to leave the repository unchanged, undo them (the omut block, the CLAUDE.md link), then run omut zero.", strings.Join(seen, " and ")))
+				}
+			}
 		}
 		return res, err
 	}

@@ -102,6 +102,25 @@ func (p *Pack) Projects() ([]string, error) {
 	return out, nil
 }
 
+// Current is the project the working directory is in, at any depth. ok is
+// false at the root and in what is not a project: hidden and ignored
+// directories.
+func (p *Pack) Current() (name string, ok bool) {
+	abs, err := filepath.Abs(".")
+	if err != nil {
+		return "", false
+	}
+	rel, err := filepath.Rel(p.Root, abs)
+	if err != nil {
+		return "", false
+	}
+	name, _, _ = strings.Cut(filepath.ToSlash(rel), "/")
+	if name == ".." || ValidName(name) != nil || slices.Contains(p.Ignore(), name) {
+		return "", false
+	}
+	return name, true
+}
+
 // Graveyard returns the names of killed projects.
 func (p *Pack) Graveyard() []string {
 	d, err := meta.Read(p.Lead(Graveyard))

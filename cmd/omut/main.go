@@ -147,10 +147,31 @@ func target(pos []string) (p *pack.Pack, dir, name string, err error) {
 	if err != nil {
 		return nil, "", "", err
 	}
+	if current, ok := p.Current(); ok && len(pos) == 0 {
+		return p, p.Dir(current), current, nil
+	}
 	if name, err = p.Resolve(arg); err != nil {
 		return nil, "", "", err
 	}
 	return p, p.Dir(name), name, nil
+}
+
+// packScope finds what check and zero work on inside a pack: a project, or
+// the pack itself when name is "". Without an argument it is the project the
+// working directory is in, and the pack at the root; from a project, ".."
+// names the pack.
+func packScope(p *pack.Pack, pos []string) (name string, err error) {
+	switch {
+	case len(pos) > 1:
+		return "", errors.New("one project at a time")
+	case len(pos) == 0:
+		name, _ = p.Current()
+		return name, nil
+	}
+	if abs, err := filepath.Abs(pos[0]); err == nil && abs == p.Root {
+		return "", nil
+	}
+	return p.Resolve(pos[0])
 }
 
 func cmdStart(args []string, out io.Writer) error {
@@ -193,7 +214,7 @@ func cmdStart(args []string, out io.Writer) error {
 }
 
 const privateNote = `
-The meta is private: git ignores .omut/ and CLAUDE.local.md through .git/info/exclude, and the repository's own files are unchanged. Claude Code finds the meta through CLAUDE.local.md. Codex has no local file that adds to AGENTS.md: give it the session-start hook (https://github.com/metravod/omut/blob/main/docs/hooks.md#codex) or this line in ~/.codex/AGENTS.md:
+The meta is private: git ignores .omut/ and CLAUDE.local.md through .git/info/exclude, and this command leaves the repository's own files alone. Claude Code finds the meta through CLAUDE.local.md. Codex has no local file that adds to AGENTS.md: give it the session-start hook (https://github.com/metravod/omut/blob/main/docs/hooks.md#codex) or this line in ~/.codex/AGENTS.md:
   If the repository has .omut/, keep its meta by .omut/README.md.
 To share the meta later: remove the omut lines from .git/info/exclude, run omut zero, commit .omut/.
 `
@@ -306,20 +327,21 @@ func cmdCheck(args []string, out io.Writer) error {
 		findings = check.Standalone(abs, check.Options{})
 	case err != nil:
 		return err
-	case len(pos) > 0:
-		name, err := p.Resolve(pos[0])
+	default:
+		name, err := packScope(p, pos)
 		if err != nil {
 			return err
+		}
+		if name == "" {
+			if findings, err = check.Pack(p, check.Options{}); err != nil {
+				return err
+			}
+			break
 		}
 		if _, err := os.Stat(p.Dir(name)); err != nil {
 			return fmt.Errorf("no project %s", name)
 		}
 		findings = check.Project(p, name, check.Options{})
-	default:
-		findings, err = check.Pack(p, check.Options{})
-		if err != nil {
-			return err
-		}
 	}
 	if *asJSON {
 		enc := json.NewEncoder(out)
@@ -365,20 +387,27 @@ func cmdZero(args []string, out io.Writer) error {
 		findings = check.Standalone(dir, check.Options{})
 	case err != nil:
 		return err
-	case len(pos) > 0:
-		name, err := p.Resolve(pos[0])
+	default:
+		name, err := packScope(p, pos)
 		if err != nil {
 			return err
+		}
+		if name == "" {
+			if res, err = scaffold.ZeroRoot(p, opt); err != nil {
+				return err
+			}
+			findings, _ = check.Pack(p, check.Options{})
+			break
+		}
+		// A directory you merely stand in doesn't get a scaffold by accident:
+		// naming a project is how to ask for one.
+		if _, err := os.Stat(filepath.Join(p.Dir(name), pack.MetaDir)); err != nil && len(pos) == 0 {
+			return fmt.Errorf("%s has no .omut/: omut start creates the meta, omut zero .. repairs the pack", name)
 		}
 		if res, err = scaffold.ZeroProject(p, name, opt); err != nil {
 			return err
 		}
 		findings = check.Project(p, name, check.Options{})
-	default:
-		if res, err = scaffold.ZeroRoot(p, opt); err != nil {
-			return err
-		}
-		findings, _ = check.Pack(p, check.Options{})
 	}
 	if len(res.Created)+len(res.Updated)+len(res.Removed) == 0 {
 		fmt.Fprintln(out, "The scaffold is fine.")

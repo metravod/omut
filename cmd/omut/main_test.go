@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/metravod/omut/internal/check"
+	"github.com/metravod/omut/internal/pack"
 	"github.com/metravod/omut/templates"
 )
 
@@ -892,5 +893,144 @@ func TestParallelLogLinesMerge(t *testing.T) {
 	}
 	if fs := findings(t, dir); has(fs, filepath.Base(dir), "shape") {
 		t.Errorf("merged log out of shape: %+v", fs)
+	}
+}
+
+// Without a name, every command takes the project you are in.
+func TestCommandsTakeTheProjectYouAreIn(t *testing.T) {
+	root := t.TempDir()
+	must(t, root, "init")
+	must(t, root, "start", "a")
+	must(t, root, "start", "b")
+	a := filepath.Join(root, "a")
+	deep := filepath.Join(a, "src", "pkg")
+	write(t, filepath.Join(deep, "x.go"), "package x\n")
+
+	only := func(fs []check.Finding, want string) {
+		t.Helper()
+		for _, f := range fs {
+			if f.Project != want {
+				t.Errorf("wanted only %q, got a finding of %q: %+v", want, f.Project, f)
+			}
+		}
+		if len(fs) == 0 {
+			t.Error("no findings at all")
+		}
+	}
+	only(findings(t, a), "a")
+	only(findings(t, deep), "a")
+	only(findings(t, a, "."), "a")
+	only(findings(t, a, "../b"), "b")
+	for name, fs := range map[string][]check.Finding{
+		"root":    findings(t, root),
+		"..":      findings(t, a, ".."),
+		"root .":  findings(t, root, "."),
+		"in meta": findings(t, filepath.Join(root, ".omut")),
+	} {
+		if !has(fs, "a", "unfilled") || !has(fs, "b", "unfilled") {
+			t.Errorf("%s: not the whole pack: %+v", name, fs)
+		}
+	}
+
+	// zero repairs the project you are in, and leaves the root to the root.
+	lead := filepath.Join(root, ".omut/LEAD.md")
+	write(t, lead, "old\n")
+	readme := filepath.Join(a, ".omut/README.md")
+	os.Remove(readme)
+	if out := must(t, deep, "zero"); !strings.Contains(out, "created  .omut/README.md") {
+		t.Errorf("zero in a project said:\n%s", out)
+	}
+	if _, err := os.Stat(readme); err != nil {
+		t.Error("zero in a project did not repair it")
+	}
+	if read(t, lead) != "old\n" {
+		t.Error("zero in a project touched the root")
+	}
+	must(t, a, "zero", "..")
+	if read(t, lead) == "old\n" {
+		t.Error("zero .. did not repair the root")
+	}
+
+	// Standing in a directory without meta doesn't give it a scaffold.
+	bare := filepath.Join(root, "bare")
+	write(t, filepath.Join(bare, "notes.txt"), "x\n")
+	if _, err := omut(t, bare, "zero"); err == nil || !strings.Contains(err.Error(), "omut start") {
+		t.Errorf("zero in a directory without meta: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(bare, ".omut")); err == nil {
+		t.Error("zero laid down a scaffold where it was only standing")
+	}
+	only(findings(t, bare), "bare")
+
+	// An ignored directory is not a project: it stays a view of the pack.
+	brief := filepath.Join(root, ".omut/brief.md")
+	write(t, brief, strings.Replace(read(t, brief), "ignore: []", "ignore: [bare]", 1))
+	if fs := findings(t, bare); !has(fs, "a", "unfilled") || has(fs, "bare", "no-meta") {
+		t.Errorf("in an ignored directory: %+v", fs)
+	}
+
+	if out := must(t, deep, "freeze"); !strings.Contains(out, "a: status: frozen") {
+		t.Errorf("freeze from a subdirectory said:\n%s", out)
+	}
+	if _, err := omut(t, root, "freeze"); err == nil {
+		t.Error("freeze at the root: no error")
+	}
+	if _, err := omut(t, root, "check", "a", "b"); err == nil {
+		t.Error("check with two names: no error")
+	}
+}
+
+func TestPrivateOverMetaNotYetInGit(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("no git")
+	}
+	// Without git the refusal is about git, not about meta "in git".
+	bare := t.TempDir()
+	must(t, bare, "start")
+	if _, err := omut(t, bare, "start", "--private"); !errors.Is(err, pack.ErrNoGit) {
+		t.Errorf("--private outside git over existing meta: %v", err)
+	}
+
+	dir := t.TempDir()
+	git(t, dir, "init", "-q")
+	write(t, filepath.Join(dir, "README.md"), "# theirs\n")
+	git(t, dir, "add", "-A")
+	git(t, dir, "commit", "-qm", "init")
+
+	must(t, dir, "start")
+	brief := filepath.Join(dir, ".omut/brief.md")
+	write(t, brief, read(t, brief)+"written before going private\n")
+	out, err := omut(t, dir, "start", "--private")
+	if err != nil {
+		t.Fatalf("--private over meta not yet in git: %v", err)
+	}
+	if !strings.Contains(read(t, brief), "written before going private") {
+		t.Error("--private rewrote the meta it took in")
+	}
+	if !strings.Contains(out, "git still sees AGENTS.md and CLAUDE.md") {
+		t.Errorf("no word on what the earlier start left:\n%s", out)
+	}
+	if st := gitOut(t, dir, "status", "--porcelain", "--", ".omut"); st != "" {
+		t.Errorf("git still sees the meta:\n%s", st)
+	}
+
+	// Following the note gives what --private gives on a clean repository.
+	os.Remove(filepath.Join(dir, "AGENTS.md"))
+	os.Remove(filepath.Join(dir, "CLAUDE.md"))
+	must(t, dir, "zero")
+	if st := gitOut(t, dir, "status", "--porcelain", "--untracked-files=all"); st != "" {
+		t.Errorf("the repository changed:\n%s", st)
+	}
+	if !strings.Contains(read(t, filepath.Join(dir, "CLAUDE.local.md")), "<!-- omut:start -->") {
+		t.Error("no omut block in CLAUDE.local.md")
+	}
+
+	// Staged is on its way into git: refused, and the reason says so.
+	staged := t.TempDir()
+	git(t, staged, "init", "-q")
+	must(t, staged, "start")
+	git(t, staged, "add", "-A")
+	if _, err := omut(t, staged, "start", "--private"); err == nil || !strings.Contains(err.Error(), "in git already") {
+		t.Errorf("--private over staged meta: %v", err)
 	}
 }

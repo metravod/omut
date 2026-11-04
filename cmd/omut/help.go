@@ -62,8 +62,9 @@ Gives a project its meta: a new directory, or an existing one as it is. Safe to
 repeat: it only adds what is missing.
 
 Which project:
-  inside a pack   the project named, or the one you are in. A project is a
-                  directory right under the pack root; a missing one is created.
+  inside a pack   the project named, or the one you are in, at any depth. A
+                  project is a directory right under the pack root; a missing
+                  one is created.
   outside a pack  the directory given, or the current one, as a single project.
                   A missing one is created, but not its parents. No omut init
                   needed.
@@ -102,8 +103,12 @@ With --private, for a repository that is not yours:
 Refuses:
   a frozen project (omut thaw first); a path that is a file
   a path inside a pack that is not right under its root
-  --private: outside git; on a directory that doesn't exist; where .omut/ exists
-  and git doesn't ignore it
+  --private: outside git; on a directory that doesn't exist; where git tracks
+  .omut/ (committed or staged)
+
+--private over a .omut/ not yet in git keeps it as it is and makes it private.
+What an earlier omut start did to AGENTS.md and CLAUDE.md stays, and omut says
+what git still sees there.
 
 What's next: the templates are empty, and check reports them as unfilled and
 unverified until an agent fills them in. Tell your agent "adopt this project
@@ -119,8 +124,9 @@ Reports on the shape and freshness of the meta. Changes nothing. Runs without a
 network and reads git only.
 
 What it checks:
-  inside a pack, no name   the whole pack, even from inside a project
-  inside a pack, a name    that project (from inside it: omut check .)
+  in a project of a pack   that project, at any depth
+  at a pack's root         the whole pack
+  a name, or a path        that project; .. from a project is the whole pack
   outside a pack           the directory given, or the current one; it needs
                            .omut/brief.md
 
@@ -144,9 +150,10 @@ Repairs the scaffold and brings the tool files to this version: this is how a
 project or a pack is updated after a new release of omut.
 
 Which part:
-  inside a pack, no name   the pack root only, even from inside a project; each
-                           project takes its own run (omut zero <project>)
-  inside a pack, a name    that project (from inside it: omut zero .)
+  in a project of a pack   that project, at any depth; it needs .omut/
+  at a pack's root         the root only: each project takes its own run
+  a name, or a path        that project, its .omut/ created when missing; ..
+                           from a project is the root
   outside a pack           the directory given, or the current one; it needs
                            .omut/
 
@@ -171,8 +178,8 @@ Exit code: 0 even with shape errors listed (check fails on them); 1 refused.
 Sets status: frozen in .omut/brief.md. That one field, nothing else: not even
 "updated".
 
-The project is the one named or the one you are in; outside a pack, the
-directory given or the current one. It needs .omut/brief.md.
+The project is the one named or the one you are in, at any depth; outside a
+pack, the directory given or the current one. It needs .omut/brief.md.
 
 Do it with the human's consent, after a final "Now" and a log line. If "Where it
 lives" is not empty, freeze warns: make sure nothing still runs or spends money;
@@ -188,8 +195,8 @@ Exit code: 0 done or frozen already; 1 no brief, or a broken one.
 
 Sets status: active in .omut/brief.md. That one field, nothing else.
 
-The project is the one named or the one you are in; outside a pack, the
-directory given or the current one. It needs .omut/brief.md.
+The project is the one named or the one you are in, at any depth; outside a
+pack, the directory given or the current one. It needs .omut/brief.md.
 
 Exit code: 0 done or active already; 1 no brief, or a broken one.
 `,

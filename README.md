@@ -6,7 +6,7 @@ Project memory that any agent can read, keep and check. A few plain markdown fil
 
 > *Omut pamyati* is the Russian name of Dumbledore's Pensieve: you dip into someone's memories and see how it really was.
 
-Status: v0.4, early and used daily on a real pack of projects. Questions and stories of how it went: [Discussions](https://github.com/metravod/omut/discussions).
+Status: v0.6, early and used daily on a real pack of projects. Questions and stories of how it went: [Discussions](https://github.com/metravod/omut/discussions).
 
 ## Why
 
