@@ -24,7 +24,7 @@ curl -fsSL https://raw.githubusercontent.com/metravod/omut/main/install.sh | sh
 cd my-project && omut start
 ```
 
-Then tell your agent: *"adopt this project following .omut/README.md"*. It reads the code, git history and old notes, fills the brief and the decisions, and asks you what the sources don't say. From then on it keeps the meta as it works: the rules travel inside the repository, so the next agent finds them without omut installed.
+Then tell your agent: *"adopt this project following .omut/README.md"*. It reads the code, git history and old notes, fills the brief and the decisions, and asks you what the sources don't say. It also asks once whether its own memory should keep repeating those facts; that memory stays as it is unless you choose otherwise. From then on it keeps the meta as it works: the rules travel inside the repository, so the next agent finds them without omut installed.
 
 Not your repository? See [On a repository that is not yours](#on-a-repository-that-is-not-yours).
 
@@ -103,7 +103,7 @@ An agent started in the root is the lead: it knows the whole pack and tells you 
 | `zero [project]` | repair the scaffold, update the tool files |
 | `hook start\|commit` | session context for agents, a git pre-commit reminder ([recipes](docs/hooks.md)) |
 
-`check`, `zero`, `freeze` and `thaw` work on a single repository without a pack. The templates are plain markdown in [`templates/`](templates/), so all of it can be set up by hand too.
+`check`, `zero`, `freeze` and `thaw` work on a single repository without a pack, from any subdirectory or git worktree of it. In a subdirectory, `omut start` won't lay a second meta by accident; `omut start .` gives it its own, for a part of a monorepo. The templates are plain markdown in [`templates/`](templates/), so all of it can be set up by hand too.
 
 ## Install
 
