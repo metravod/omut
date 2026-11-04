@@ -164,8 +164,12 @@ func zeroProject(dir string, opt Options) (*Result, error) {
 	for _, file := range projectMeta {
 		w.meta("project/omut/"+file, filepath.Join(pack.MetaDir, file))
 	}
-	for _, file := range []string{pack.Instance, pack.Log} {
-		w.meta("project/omut/local/"+file, filepath.Join(pack.MetaDir, pack.Local, file))
+	// A linked worktree keeps no memory of its own: this copy's layer is in
+	// the main checkout (D17), and would go with the worktree when it goes.
+	if pack.MainCheckout(dir) == "" {
+		for _, file := range []string{pack.Instance, pack.Log} {
+			w.meta("project/omut/local/"+file, filepath.Join(pack.MetaDir, pack.Local, file))
+		}
 	}
 	w.mkdir(filepath.Join(pack.MetaDir, pack.Threads))
 	// Private meta (D16) leaves the repository's own files alone: the

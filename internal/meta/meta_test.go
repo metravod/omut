@@ -66,18 +66,18 @@ func TestDecisions(t *testing.T) {
 - D4 [doubted 2026-10-31] Keep raw HTML
 - D5 [superseded → D2] Deploy with cron
 - D6 [maybe] not a status
-- D7 [open 2026-01-01] open has no date
+- D7 [open 2026-01-01] open may say since when
 - Dx broken
 <!-- - D9 [nonsense] does not count in a comment -->
 `)
 	decs, bad := d.Decisions()
-	if len(decs) != 5 {
+	if len(decs) != 6 {
 		t.Fatalf("parsed %d decisions: %+v", len(decs), decs)
 	}
 	if decs[4].Status != "superseded" || decs[4].Supersedes != 2 {
 		t.Errorf("superseded parsed as %+v", decs[4])
 	}
-	if !slices.Equal(bad, []int{8, 9, 10}) {
+	if !slices.Equal(bad, []int{8, 10}) {
 		t.Errorf("bad lines = %v", bad)
 	}
 }

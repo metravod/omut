@@ -858,7 +858,7 @@ func TestPrivateMetaLeavesTheRepoAlone(t *testing.T) {
 	// A project in a subdirectory of the repository.
 	sub := filepath.Join(dir, "tools", "bot")
 	write(t, filepath.Join(sub, "main.go"), "package main\n")
-	must(t, sub, "start", "--private")
+	must(t, sub, "start", ".", "--private")
 	if ex := read(t, filepath.Join(dir, ".git/info/exclude")); !strings.Contains(ex, "/tools/bot/.omut/\n") {
 		t.Errorf("exclude for a subdirectory:\n%s", ex)
 	}

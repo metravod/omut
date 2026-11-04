@@ -90,7 +90,8 @@ func (p *Pack) Projects() ([]string, error) {
 	var out []string
 	for _, e := range entries {
 		name := e.Name()
-		if strings.HasPrefix(name, ".") || slices.Contains(ignore, name) {
+		// A linked worktree is a working copy of a project, not one more.
+		if strings.HasPrefix(name, ".") || slices.Contains(ignore, name) || LinkedWorktree(filepath.Join(p.Root, name)) {
 			continue
 		}
 		info, err := os.Stat(filepath.Join(p.Root, name))
@@ -104,11 +105,15 @@ func (p *Pack) Projects() ([]string, error) {
 
 // Current is the project the working directory is in, at any depth. ok is
 // false at the root and in what is not a project: hidden and ignored
-// directories.
+// directories. In a linked worktree beside its project, sharing its meta, it
+// is that project.
 func (p *Pack) Current() (name string, ok bool) {
 	abs, err := filepath.Abs(".")
 	if err != nil {
 		return "", false
+	}
+	if pl := Locate("."); pl.Worktree != "" && same(filepath.Dir(pl.Dir), p.Root) {
+		return filepath.Base(pl.Dir), true
 	}
 	rel, err := filepath.Rel(p.Root, abs)
 	if err != nil {

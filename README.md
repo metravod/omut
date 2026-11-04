@@ -6,7 +6,7 @@ Project memory that any agent can read, keep and check. A few plain markdown fil
 
 > *Omut pamyati* is the Russian name of Dumbledore's Pensieve: you dip into someone's memories and see how it really was.
 
-Status: v0.6, early and used daily on a real pack of projects. Questions and stories of how it went: [Discussions](https://github.com/metravod/omut/discussions).
+Status: v0.7, early and used daily on a real pack of projects. Questions and stories of how it went: [Discussions](https://github.com/metravod/omut/discussions).
 
 ## Why
 
@@ -47,6 +47,7 @@ cd their-repo && omut start --private
 - `.omut/` and `CLAUDE.local.md` go into `.git/info/exclude`, which is never committed. The repository's own files, `AGENTS.md` and `.gitignore` included, don't change by a byte: `git status` stays empty.
 - Claude Code finds the meta through `CLAUDE.local.md`. Codex has no local file that adds to `AGENTS.md`, so give it the [session-start hook](docs/hooks.md#codex) or one line in `~/.codex/AGENTS.md`: *If the repository has .omut/, keep its meta by .omut/README.md.*
 - Everything else works as usual: `check`, `hook start`, the claims. The agent is told the meta is private and stays out of commits.
+- A clone keeps one memory, in its main checkout: every git worktree finds it through `check` and `hook start`, which gives the agent the full path. `local/` of shared meta works the same way.
 
 When the team sees what it gives, share it: remove the omut lines from `.git/info/exclude`, run `omut zero` (it writes the block into `AGENTS.md`), move what is true only for your copy into `.omut/local/`, and commit `.omut/`. Same format, nothing to migrate.
 

@@ -430,7 +430,7 @@ func checkThread(r *report, d *meta.Doc, opt Options) {
 func checkDecisions(r *report, d *meta.Doc, frozen bool) {
 	decs, bad := d.Decisions()
 	for _, line := range bad {
-		r.add("shape", Error, d.Path, line, "decision line out of format: - Dn [open|accepted …|doubted …|superseded → Dn] text")
+		r.add("shape", Error, d.Path, line, "decision line out of format: - Dn [open …|accepted …|doubted …|superseded → Dn] text")
 	}
 	seen := map[int]int{}
 	for _, dec := range decs {

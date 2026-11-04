@@ -201,7 +201,7 @@ type DueClaim struct {
 // oldest, none seen in the last DueDays days. It also counts the claims
 // with no way to check them. Nothing for a frozen project. This is how
 // the audit happens a little at a time instead of in a ritual nobody runs.
-func Due(dir string, n int, opt Options) (due []DueClaim, unchecked int) {
+func Due(dir, instance string, n int, opt Options) (due []DueClaim, unchecked int) {
 	lead := filepath.Join(dir, pack.MetaDir)
 	brief, err := meta.Read(filepath.Join(lead, pack.Brief))
 	if err != nil || brief.Front["status"] == "frozen" {
@@ -209,7 +209,11 @@ func Due(dir string, n int, opt Options) (due []DueClaim, unchecked int) {
 	}
 	var all []DueClaim
 	collect := func(d *meta.Doc, sections ...string) {
-		rel, _ := filepath.Rel(dir, d.Path)
+		// In a linked worktree this copy's layer is elsewhere: its full path.
+		rel := d.Path
+		if r, err := filepath.Rel(dir, d.Path); err == nil && !strings.HasPrefix(r, "..") {
+			rel = r
+		}
 		for _, c := range d.Claims(sections...) {
 			if c.How == "" {
 				unchecked++
@@ -219,7 +223,7 @@ func Due(dir string, n int, opt Options) (due []DueClaim, unchecked int) {
 		}
 	}
 	collect(brief, briefClaimSections...)
-	if d, err := meta.Read(filepath.Join(lead, pack.Local, pack.Instance)); err == nil {
+	if d, err := meta.Read(filepath.Join(instance, pack.MetaDir, pack.Local, pack.Instance)); err == nil {
 		collect(d, instanceSections...)
 	}
 	cutoff := opt.today().Add(-DueDays * 24 * time.Hour).Format(meta.DateLayout)

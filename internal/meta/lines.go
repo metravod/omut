@@ -38,12 +38,7 @@ func (d *Doc) Decisions() (out []Decision, bad []int) {
 		inner := strings.TrimSpace(m[2])
 		status, _, _ := strings.Cut(inner, " ")
 		switch status {
-		case "open":
-			if inner != "open" {
-				bad = append(bad, i+1)
-				continue
-			}
-		case "accepted", "doubted":
+		case "open", "accepted", "doubted":
 		case "superseded":
 			sm := supersededRe.FindStringSubmatch(inner)
 			if sm == nil {

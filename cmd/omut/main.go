@@ -101,7 +101,7 @@ func parse(fs *flag.FlagSet, args []string) ([]string, error) {
 }
 
 func byFlag(fs *flag.FlagSet) *string {
-	return fs.String("by", os.Getenv("OMUT_BY"), "`agent/model` who fills in the templates, for the by field of new files (default: $OMUT_BY)")
+	return fs.String("by", os.Getenv("OMUT_BY"), "`agent/model` who fills in the templates, such as claude-code/opus-5.5, for the by field of new files (default: $OMUT_BY)")
 }
 
 func cmdInit(args []string, out io.Writer) error {
@@ -139,6 +139,11 @@ func target(pos []string) (p *pack.Pack, dir, name string, err error) {
 	}
 	p, err = findPack()
 	if errors.Is(err, pack.ErrNoPack) {
+		if len(pos) == 0 {
+			if pl := pack.Locate("."); pl.Dir != "" && !pl.Foreign {
+				return nil, pl.Dir, filepath.Base(pl.Dir), nil
+			}
+		}
 		if dir, err = filepath.Abs(arg); err != nil {
 			return nil, "", "", err
 		}
@@ -186,6 +191,14 @@ func cmdStart(args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	// Private meta is the clone's, so it goes to the main checkout: laid down
+	// in a linked worktree, it would go when the worktree goes (D17).
+	if main := pack.MainPath(dir); *private && len(pos) == 0 && main != "" {
+		dir, name = main, filepath.Base(main)
+	}
+	if cwd, err := os.Getwd(); err == nil && p == nil && len(pos) == 0 && !sameDir(dir, cwd) {
+		fmt.Fprintf(out, "The meta of this directory is in %s. To give this directory its own: omut start .\n", dir)
+	}
 	res, err := scaffold.StartAt(dir, scaffold.Options{By: *by, Private: *private})
 	if err != nil {
 		return err
@@ -211,6 +224,12 @@ func cmdStart(args []string, out io.Writer) error {
 		fmt.Fprintf(out, "\nThe repository is on GitHub. If it is public, offer the human the omut badge for README.md: it links readers to .omut/ and turns green while CI finds the meta fresh (workflow: %s).\n  %s\n", badgeRecipe, b)
 	}
 	return nil
+}
+
+func sameDir(a, b string) bool {
+	ai, err1 := os.Stat(a)
+	bi, err2 := os.Stat(b)
+	return err1 == nil && err2 == nil && os.SameFile(ai, bi)
 }
 
 const privateNote = `
@@ -315,16 +334,19 @@ func cmdCheck(args []string, out io.Writer) error {
 	switch {
 	case errors.Is(err, pack.ErrNoPack):
 		// A project outside any pack, such as a colleague's clone, still
-		// carries its own meta.
+		// carries its own meta. From inside it or a worktree of it, that too.
 		dir := "."
 		if len(pos) > 0 {
 			dir = pos[0]
 		}
-		abs, _ := filepath.Abs(dir)
-		if _, serr := os.Stat(filepath.Join(abs, pack.MetaDir, pack.Brief)); serr != nil {
-			return err
+		pl := pack.Locate(dir)
+		if pl.Dir == "" || pl.Foreign {
+			return errNoMeta
 		}
-		findings = check.Standalone(abs, check.Options{})
+		if _, serr := os.Stat(filepath.Join(pl.Dir, pack.MetaDir, pack.Brief)); serr != nil {
+			return errNoMeta
+		}
+		findings = check.Dir(pl.Dir, check.Options{})
 	case err != nil:
 		return err
 	default:
@@ -360,6 +382,8 @@ func cmdCheck(args []string, out io.Writer) error {
 	}
 	return nil
 }
+
+var errNoMeta = errors.New("no .omut/ here or above: omut start gives this directory its meta (omut init is only for a pack of several projects)")
 
 func cmdZero(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("zero", flag.ContinueOnError)

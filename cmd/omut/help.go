@@ -47,7 +47,7 @@ More:
                                  anything is laid down
 
 A single repository needs no pack: outside one, start, freeze, thaw, check and
-zero work on the directory given, or the current one.
+zero work on the project you are in, at any depth or from a linked worktree.
 
 omut never commits or stages, changes git config or installs hooks, edits
 agents' settings or uses the network. It runs git only to read, and writes
@@ -65,9 +65,11 @@ Which project:
   inside a pack   the project named, or the one you are in, at any depth. A
                   project is a directory right under the pack root; a missing
                   one is created.
-  outside a pack  the directory given, or the current one, as a single project.
-                  A missing one is created, but not its parents. No omut init
-                  needed.
+  outside a pack  the directory given, as a single project; a missing one is
+                  created, but not its parents. No omut init needed. Without a
+                  name, the project you are in, at any depth; if there is none,
+                  the current directory. omut start . gives a subdirectory its
+                  own meta, for a monorepo.
 
 What it writes in the project:
   .omut/README.md, .gitignore, .gitattributes
@@ -92,8 +94,7 @@ With --private, for a repository that is not yours:
   CLAUDE.local.md       takes the block instead of AGENTS.md (unless AGENTS.md
                         has it already), appended when the file exists
   AGENTS.md, CLAUDE.md, .gitignore and all tracked files don't change: git
-  status stays empty. .omut/ exists in this working tree only; another worktree
-  needs its own omut start --private.
+  status stays empty.
   Claude Code reads CLAUDE.local.md. Codex has no such file: give it the
   session-start hook (omut help hook) or this line in ~/.codex/AGENTS.md:
     If the repository has .omut/, keep its meta by .omut/README.md.
@@ -109,6 +110,12 @@ Refuses:
 --private over a .omut/ not yet in git keeps it as it is and makes it private.
 What an earlier omut start did to AGENTS.md and CLAUDE.md stays, and omut says
 what git still sees there.
+
+In a linked git worktree: a clone keeps one memory, in its main checkout.
+Private meta goes there, whichever copy you run this in, and every worktree
+reads it. .omut/local/ stays there too. Only committed meta exists in each
+worktree, and it follows the branch. A worktree beside the checkout doesn't read
+CLAUDE.local.md: omut hook start is what gives an agent there the path.
 
 What's next: the templates are empty, and check reports them as unfilled and
 unverified until an agent fills them in. Tell your agent "adopt this project
@@ -127,7 +134,8 @@ What it checks:
   in a project of a pack   that project, at any depth
   at a pack's root         the whole pack
   a name, or a path        that project; .. from a project is the whole pack
-  outside a pack           the directory given, or the current one; it needs
+  outside a pack           the project of the directory given or the current
+                           one, at any depth or from a linked worktree; it needs
                            .omut/brief.md
 
 Rules:
@@ -154,8 +162,8 @@ Which part:
   at a pack's root         the root only: each project takes its own run
   a name, or a path        that project, its .omut/ created when missing; ..
                            from a project is the root
-  outside a pack           the directory given, or the current one; it needs
-                           .omut/
+  outside a pack           the project of the directory you are in, or the
+                           directory given; it needs .omut/
 
 What it does:
   rewrites    tool files: a project's .omut/README.md, .gitignore and
@@ -166,6 +174,10 @@ What it does:
               if they still carry the tool-file mark
   never       rewrites brief.md, decisions.md, log.md, threads/, local/; it
               lists their shape errors, which are the agent's to fix
+  never       writes the line a human chose to add outside the block
+
+In a linked worktree: committed meta is that branch's, and local/ is not created
+there; where the worktree has no .omut/, zero works on the main checkout's.
 
 In private meta (git ignores .omut/) the block stays in CLAUDE.local.md unless
 AGENTS.md has it, and no CLAUDE.md is made.
@@ -178,8 +190,9 @@ Exit code: 0 even with shape errors listed (check fails on them); 1 refused.
 Sets status: frozen in .omut/brief.md. That one field, nothing else: not even
 "updated".
 
-The project is the one named or the one you are in, at any depth; outside a
-pack, the directory given or the current one. It needs .omut/brief.md.
+The project is the one named or the one you are in, at any depth or from a
+linked worktree; outside a pack, the directory given also works. It needs
+.omut/brief.md.
 
 Do it with the human's consent, after a final "Now" and a log line. If "Where it
 lives" is not empty, freeze warns: make sure nothing still runs or spends money;
@@ -195,8 +208,9 @@ Exit code: 0 done or frozen already; 1 no brief, or a broken one.
 
 Sets status: active in .omut/brief.md. That one field, nothing else.
 
-The project is the one named or the one you are in, at any depth; outside a
-pack, the directory given or the current one. It needs .omut/brief.md.
+The project is the one named or the one you are in, at any depth or from a
+linked worktree; outside a pack, the directory given also works. It needs
+.omut/brief.md.
 
 Exit code: 0 done or active already; 1 no brief, or a broken one.
 `,
@@ -250,7 +264,8 @@ Exit code: 0 removed; 1 refused, with the reason on stderr.
 
 For agents' and git's hooks, not called by hand. Only reads. Says nothing and
 exits 0 where there is no meta, so it is safe to install globally. omut installs
-no hook itself: those files are yours.
+no hook itself: those files are yours. In a linked worktree it finds the clone's
+meta in the main checkout and gives the agent the full path.
 
   start    at an agent's session start: prints the brief, this copy's memory,
            decisions waiting for the human, unfinished threads, what check

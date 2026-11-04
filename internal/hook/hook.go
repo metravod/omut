@@ -17,37 +17,18 @@ import (
 	"github.com/metravod/omut/internal/pack"
 )
 
-// Locate walks up from dir to the nearest directory with .omut/. It is a
-// pack root when .omut/LEAD.md is there. root is "" when there is none.
-func Locate(dir string) (root string, isPack bool) {
-	dir, err := filepath.Abs(dir)
-	if err != nil {
-		return "", false
-	}
-	for {
-		if info, err := os.Stat(filepath.Join(dir, pack.MetaDir)); err == nil && info.IsDir() {
-			return dir, pack.IsRoot(dir)
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", false
-		}
-		dir = parent
-	}
-}
-
 // Start is the context an agent gets when a session starts in dir: the
 // brief, what waits for a decision, the unfinished threads and what check
 // says. "" when dir is not under any meta.
 func Start(dir string) string {
-	root, isPack := Locate(dir)
+	pl := pack.Locate(dir)
 	switch {
-	case root == "":
+	case pl.Dir == "":
 		return ""
-	case isPack:
-		return startPack(root)
+	case pack.IsRoot(pl.Dir):
+		return startPack(pl.Dir)
 	}
-	return startProject(root)
+	return startProject(pl)
 }
 
 func startPack(root string) string {
@@ -61,23 +42,29 @@ func startPack(root string) string {
 	return b.String()
 }
 
-func startProject(dir string) string {
+func startProject(pl pack.Place) string {
+	dir := pl.Dir
 	lead := filepath.Join(dir, pack.MetaDir)
 	var b strings.Builder
 	fmt.Fprintf(&b, "# omut: the meta of %s\n\n", filepath.Base(dir))
 	b.WriteString("This project keeps its meta in `.omut/` (rules: `.omut/README.md`). Below is what to read at the start. When a piece of work is done, record it before you tell the human it is done: a line at the top of `.omut/log.md`, \"Now\" in `.omut/brief.md`, a thread for what is left. You won't see the session end, so don't wait for it.\n")
 
+	writeWorktree(&b, pl)
 	if pack.Private(dir) {
 		b.WriteString("\nThe meta is this copy's only: git ignores `.omut/` (`omut start --private`), and it stays out of commits. Don't `git add -f` it.\n")
 	}
-	writeUnrecorded(&b, dir)
+	work := dir
+	if pl.Worktree != "" {
+		work = pl.Worktree
+	}
+	writeUnrecorded(&b, work, dir)
 	writeFindings(&b, check.Dir(dir, check.Options{}), false)
 
 	if text, err := os.ReadFile(filepath.Join(lead, pack.Brief)); err == nil {
 		b.WriteString("\n## .omut/brief.md\n\n")
 		b.WriteString(strings.TrimRight(string(text), "\n") + "\n")
 	}
-	writeInstance(&b, lead)
+	writeInstance(&b, filepath.Join(pl.Instance, pack.MetaDir))
 
 	var waiting []string
 	if d, err := meta.Read(filepath.Join(lead, pack.Decisions)); err == nil {
@@ -129,20 +116,31 @@ func startProject(dir string) string {
 		b.WriteString("\n## Unfinished threads\n\n")
 		b.WriteString(strings.Join(open, "\n") + "\n")
 	}
-	writeDue(&b, dir)
+	writeDue(&b, dir, pl.Instance)
 	return b.String()
+}
+
+// writeWorktree tells an agent in a linked worktree where the clone's memory
+// is (D17): relative paths would write a second one, gone with the worktree.
+func writeWorktree(b *strings.Builder, pl pack.Place) {
+	switch {
+	case pl.Worktree != "":
+		fmt.Fprintf(b, "\nYou are in a linked git worktree, and a clone keeps one meta: it is in the main checkout, `%s`. Read and write it there by that full path; the paths below are relative to `%s`. Don't create `.omut/` in this worktree.\n", filepath.Join(pl.Dir, pack.MetaDir), pl.Dir)
+	case pl.Instance != pl.Dir:
+		fmt.Fprintf(b, "\nYou are in a linked git worktree. `.omut/` here follows this branch, but this copy's memory is not here: it is `%s`, in the main checkout. Write what is true only for this copy there by that full path; don't create `.omut/local/` in this worktree.\n", filepath.Join(pl.Instance, pack.MetaDir, pack.Local))
+	}
 }
 
 // writeUnrecorded tells about work newer than the last write to the log
 // that no commit holds: a session that ended without recording it, or this
 // session's own work before a resume or a compaction. Without git it is
 // the only signal that a piece of work ended unrecorded.
-func writeUnrecorded(b *strings.Builder, dir string) {
+func writeUnrecorded(b *strings.Builder, work, dir string) {
 	logInfo, err := os.Stat(filepath.Join(dir, pack.MetaDir, pack.Log))
 	if err != nil {
 		return
 	}
-	when, what := check.NewestUnsaved(dir)
+	when, what := check.NewestUnsaved(work)
 	if what == "" || !when.After(logInfo.ModTime()) {
 		return
 	}
@@ -159,8 +157,8 @@ const dueClaims = 2
 // writeDue asks the agent to check the claims about where the project
 // lives that were seen longest ago (D11): omut remembers how to check
 // them and when it was done, the agent does it.
-func writeDue(b *strings.Builder, dir string) {
-	due, unchecked := check.Due(dir, dueClaims, check.Options{})
+func writeDue(b *strings.Builder, dir, instance string) {
+	due, unchecked := check.Due(dir, instance, dueClaims, check.Options{})
 	if len(due) == 0 && unchecked == 0 {
 		return
 	}
@@ -257,8 +255,14 @@ func Commit(dir string, strict bool) CommitResult {
 		return CommitResult{}
 	}
 	root := strings.TrimSpace(string(out))
-	lead := filepath.Join(root, pack.MetaDir)
-	if _, err := os.Stat(filepath.Join(lead, pack.Brief)); err != nil || pack.IsRoot(root) {
+	// In a linked worktree without meta of its own, the clone's is the main
+	// checkout's (D17).
+	metaRoot := root
+	if pl := pack.Locate(root); pl.Worktree != "" {
+		metaRoot = pl.Dir
+	}
+	lead := filepath.Join(metaRoot, pack.MetaDir)
+	if _, err := os.Stat(filepath.Join(lead, pack.Brief)); err != nil || pack.IsRoot(metaRoot) {
 		return CommitResult{}
 	}
 	out, err = exec.Command("git", "-C", root, "diff", "--cached", "--name-only", "-z", "--diff-filter=ACMR").Output()
@@ -271,7 +275,7 @@ func Commit(dir string, strict bool) CommitResult {
 	var b strings.Builder
 	res := CommitResult{}
 	var errs []check.Finding
-	for _, f := range check.Dir(root, check.Options{}) {
+	for _, f := range check.Dir(metaRoot, check.Options{}) {
 		if f.Level == check.Error {
 			errs = append(errs, f)
 		}
