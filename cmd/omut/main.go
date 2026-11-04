@@ -18,27 +18,6 @@ import (
 	"github.com/metravod/omut/internal/scaffold"
 )
 
-const usage = `omut: meta for a pack of projects that any agent can read and check.
-
-Commands:
-  init [dir]                           create a pack (in the current directory by default)
-  start [project] [--private]          a new project, or adopt an existing directory
-                                       (--private: the meta stays out of git, for a repository that is not yours)
-  freeze [project]                     status: frozen
-  thaw [project]                       status: active
-  kill <project> --yes --reason "..."  remove a project, write a tombstone (--force: even with unsaved work)
-  check [project] [--json] [--fail-on warn]
-                                       check the shape and freshness of the meta
-  zero [project]                       repair the scaffold, update the tool files
-  hook start|commit                    for agents' and git's hooks: session context, pre-commit reminder
-  version
-
-Flags of init/start/zero: --by agent/model (or $OMUT_BY), who fills in the templates.
-
-Outside a pack, start, freeze, thaw, check and zero work on a single
-project: the directory given, or the current one.
-`
-
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {
 		var exit exitCode
@@ -61,16 +40,25 @@ func run(args []string, out io.Writer) error {
 		fmt.Fprint(out, usage)
 		return nil
 	}
-	cmd, args := args[0], args[1:]
+	err := dispatch(args[0], args[1:], out)
+	var help helpRequest
+	if errors.As(err, &help) {
+		printHelp(out, help.fs)
+		return nil
+	}
+	return err
+}
+
+func dispatch(cmd string, args []string, out io.Writer) error {
 	switch cmd {
 	case "init":
 		return cmdInit(args, out)
 	case "start":
 		return cmdStart(args, out)
 	case "freeze":
-		return cmdStatus(args, out, "frozen")
+		return cmdStatus("freeze", "frozen", args, out)
 	case "thaw":
-		return cmdStatus(args, out, "active")
+		return cmdStatus("thaw", "active", args, out)
 	case "kill":
 		return cmdKill(args, out)
 	case "check":
@@ -80,23 +68,28 @@ func run(args []string, out io.Writer) error {
 	case "hook":
 		return cmdHook(args, out, os.Stdin, os.Stderr)
 	case "version", "--version":
+		if _, err := parse(flag.NewFlagSet("version", flag.ContinueOnError), args); err != nil {
+			return err
+		}
 		fmt.Fprintln(out, version)
 		return nil
 	case "help", "-h", "--help":
-		fmt.Fprint(out, usage)
-		return nil
+		return cmdHelp(args, out)
 	}
 	return fmt.Errorf("no command %q\n\n%s", cmd, usage)
 }
 
 // parse lets flags and positional arguments come in any order, so an agent
-// can write both "kill x --yes" and "kill --yes x".
+// can write both "kill x --yes" and "kill --yes x". Every command calls it
+// before doing anything, so --help is safe anywhere on the line.
 func parse(fs *flag.FlagSet, args []string) ([]string, error) {
 	fs.SetOutput(io.Discard)
 	var pos []string
 	for {
-		if err := fs.Parse(args); err != nil {
-			return nil, err
+		if err := fs.Parse(args); errors.Is(err, flag.ErrHelp) {
+			return nil, helpRequest{fs}
+		} else if err != nil {
+			return nil, fmt.Errorf("%w (omut help %s)", err, fs.Name())
 		}
 		args = fs.Args()
 		if len(args) == 0 {
@@ -108,7 +101,7 @@ func parse(fs *flag.FlagSet, args []string) ([]string, error) {
 }
 
 func byFlag(fs *flag.FlagSet) *string {
-	return fs.String("by", os.Getenv("OMUT_BY"), "agent/model for the by field")
+	return fs.String("by", os.Getenv("OMUT_BY"), "`agent/model` who fills in the templates, for the by field of new files (default: $OMUT_BY)")
 }
 
 func cmdInit(args []string, out io.Writer) error {
@@ -205,8 +198,8 @@ The meta is private: git ignores .omut/ and CLAUDE.local.md through .git/info/ex
 To share the meta later: remove the omut lines from .git/info/exclude, run omut zero, commit .omut/.
 `
 
-func cmdStatus(args []string, out io.Writer, status string) error {
-	fs := flag.NewFlagSet(status, flag.ContinueOnError)
+func cmdStatus(cmd, status string, args []string, out io.Writer) error {
+	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
@@ -240,7 +233,7 @@ func cmdKill(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("kill", flag.ContinueOnError)
 	yes := fs.Bool("yes", false, "confirm the removal")
 	force := fs.Bool("force", false, "remove even with unsaved work")
-	reason := fs.String("reason", "", "the reason, for the tombstone")
+	reason := fs.String("reason", "", "`text` the reason, for the tombstone")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
@@ -288,7 +281,7 @@ func cmdKill(args []string, out io.Writer) error {
 func cmdCheck(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("check", flag.ContinueOnError)
 	asJSON := fs.Bool("json", false, "output JSON")
-	failOn := fs.String("fail-on", "error", "the lowest level that makes the exit code non-zero: error or warn")
+	failOn := fs.String("fail-on", "error", "`level` the lowest level that makes the exit code non-zero: error (default) or warn")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err

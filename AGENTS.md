@@ -4,7 +4,7 @@ The intent lives in `docs/spec-v0.md`; the comparison with neighbours in `docs/r
 
 - Go, standard library only. Templates are plain markdown in `templates/`, embedded into the binary.
 - The CLI never writes meaning into the meta: it lays down templates and checks shape. Keep it that way.
-- Changing a rule in `internal/check` means updating spec §8 and, if agents need to know, `templates/project/omut/README.md`.
+- Changing a rule in `internal/check` means updating spec §8, the table in `cmd/omut/help.go` (a test compares the three) and, if agents need to know, `templates/project/omut/README.md`. Changing what a command does means updating its text in `cmd/omut/help.go`.
 - `go vet ./... && go test ./...` before calling anything done.
 
 <!-- omut:start -->

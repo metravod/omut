@@ -131,6 +131,7 @@ Binaries for macOS, Linux and Windows are on the [releases page](https://github.
 
 ## Docs
 
+- `omut help <command>`: what a command writes, leaves alone and refuses, right in the terminal. `omut help meta`: the rules of the meta, before anything is laid down.
 - [Specification v0](docs/spec-v0.md)
 - [Hooks for git, CI, Claude Code, Codex, Cursor, and the badge](docs/hooks.md)
 - [Competitors and neighbours](docs/research/competitors.md)

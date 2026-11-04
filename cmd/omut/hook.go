@@ -23,7 +23,7 @@ var agents = []string{"claude", "codex", "cursor"}
 
 func cmdHook(args []string, out io.Writer, stdin *os.File, stderr io.Writer) error {
 	fs := flag.NewFlagSet("hook", flag.ContinueOnError)
-	agent := fs.String("agent", "", "the agent calling: claude, codex or cursor (shapes input and output)")
+	agent := fs.String("agent", "", "`name` the agent calling: claude, codex or cursor; reads its JSON payload and answers in its format")
 	strict := fs.Bool("strict", false, "commit: block work committed without a log entry")
 	pos, err := parse(fs, args)
 	if err != nil {
