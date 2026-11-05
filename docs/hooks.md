@@ -36,7 +36,7 @@ With a hook manager, call `omut hook commit` from it. Add `--strict` where agent
 
 ## CI and the badge
 
-`omut check` exits non-zero on shape errors; with `--fail-on warn` on warnings too: a stale brief, a brief not checked against reality for 30 days, an unfilled template, a missing pointer. That is the difference between "the meta is well-formed" and "the meta is fresh", and it is what the badge shows. A GitHub Actions workflow, `.github/workflows/omut.yml`:
+`omut check` exits non-zero on shape errors; with `--fail-on warn` on warnings too: a stale brief, a brief not checked against reality for 30 days, an unfilled template, a missing pointer. The badge reports structure and recorded freshness. It does not establish that the contents are true; agents and humans still verify the claims. A GitHub Actions workflow, `.github/workflows/omut.yml`:
 
 ```yaml
 name: omut
@@ -91,20 +91,28 @@ Without CI, a static badge says only that the meta is there:
 
 ## Codex
 
-`SessionStart` adds plain stdout as developer context. In `~/.codex/hooks.json` or `<repo>/.codex/hooks.json`; review it once with `/hooks`, and a project's `.codex/` has to be trusted:
+`SessionStart` adds plain stdout as developer context. Put the recipe in `~/.codex/hooks.json` for all projects, or `<repo>/.codex/hooks.json` for one trusted project. Merge this entry with existing hooks rather than replacing the file:
 
 ```json
 {
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume|clear|compact",
+        "matcher": "startup|resume|clear|compact|fork",
         "hooks": [{ "type": "command", "command": "omut hook start --agent codex" }]
       }
     ]
   }
 }
 ```
+
+After saving, open `/hooks` in Codex, inspect the command and trust its current definition. New or changed hooks are skipped until reviewed; a project-local `.codex/` also needs project trust. Start a new session after trusting it so `SessionStart` actually runs. Verify that it receives `# omut: the meta of ...` and your brief; in a linked worktree it should name the main checkout's private meta path. A main-checkout session finding `.omut/` by itself does not prove that the hook ran.
+
+With project-local configuration, put `.codex/hooks.json` in each linked worktree where you start Codex; a private, untracked file in the main checkout is not enough. The user-level `~/.codex/hooks.json` recipe avoids that per-worktree setup. Check `/hooks` in the actual session directory.
+
+For private meta this hook supplies the path without changing the repository's `AGENTS.md`. A global `AGENTS.md` instruction is an alternative in the main checkout (README.md), while the hook handles linked worktrees too. The agent also needs permission to write the main checkout's `.omut/`; for a Codex CLI sandbox limited to the worktree, grant the additional directory with `--add-dir` when starting the session.
+
+Codex can spill oversized hook output to a saved file and show a preview. Keep the brief focused on current state and follow the paths to details; raising the context limit is not a substitute for keeping it short. Configuration, trust and output behavior: [official OpenAI documentation](https://learn.chatgpt.com/docs/hooks).
 
 ## Cursor
 
@@ -125,4 +133,4 @@ An agent without hooks still gets the omut block in `AGENTS.md`, and the git hoo
 
 ## How far this is verified
 
-The output formats follow each vendor's hook documentation as read on 2026-11-02; `omut hook` itself is covered by tests, with and without git. The Claude Code recipe runs live (2026-11-03: a headless `claude -p` session in a pack project quoted the omut context it got at start). The Codex and Cursor recipes have not been run in a live session yet; the git hook has been run by hand on this repository.
+The adapters are covered by tests, with and without git. The Claude Code recipe ran live on 2026-11-03: a headless `claude -p` session in a pack project quoted its startup context. On 2026-11-05, Codex CLI 0.166.0 loaded the project-local recipe after native trust review in a private checkout and linked worktree; transcripts confirm developer hook messages and actual task continuation ([worked case](handoff.md)). An initial worktree run without its hook file discovered memory independently; that did not verify the hook and led to the setup note above. Only startup was exercised live for Codex, not resume/compaction/fork. Cursor remains unverified live; its format follows the vendor documentation read on 2026-11-02. The git hook has been run by hand on this repository.

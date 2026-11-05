@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/metravod/omut/internal/meta"
 	"github.com/metravod/omut/internal/pack"
@@ -29,7 +30,9 @@ const (
 // Thresholds from the spec. They are fixed for now; see spec §12.
 const (
 	BriefLines    = 60
+	BriefChars    = 6000
 	ThreadLines   = 80
+	ThreadChars   = 8000
 	LogEntries    = 50
 	VerifyDays    = 30
 	StalledDays   = 14
@@ -210,10 +213,17 @@ func project(base, dir, name string, opt Options, dead []string) []Finding {
 
 var briefSections = []string{"Why", "What it is", "Where it lives", "Now", "Next"}
 
-func checkBrief(r *report, d *meta.Doc, dir string, opt Options) {
-	if d.LineCount() > BriefLines {
-		r.add("size", Warn, d.Path, 0, "%d lines, budget %d", d.LineCount(), BriefLines)
+func checkSize(r *report, d *meta.Doc, lines, characters int) {
+	// Count the normalized markdown, including frontmatter and comments. A
+	// final newline is not content; UTF-8 encodings must not penalize a language.
+	n := utf8.RuneCountInString(strings.Join(d.Lines, "\n"))
+	if d.LineCount() > lines || n > characters {
+		r.add("size", Warn, d.Path, 0, "%d lines / %d characters, budget %d lines / %d characters: move history and detail behind links", d.LineCount(), n, lines, characters)
 	}
+}
+
+func checkBrief(r *report, d *meta.Doc, dir string, opt Options) {
+	checkSize(r, d, BriefLines, BriefChars)
 	if !d.HasFront {
 		r.add("shape", Error, d.Path, 1, "no frontmatter")
 		return
@@ -393,9 +403,7 @@ var (
 )
 
 func checkThread(r *report, d *meta.Doc, opt Options) {
-	if d.LineCount() > ThreadLines {
-		r.add("size", Warn, d.Path, 0, "%d lines, thread budget %d", d.LineCount(), ThreadLines)
-	}
+	checkSize(r, d, ThreadLines, ThreadChars)
 	if !d.HasFront {
 		r.add("shape", Error, d.Path, 1, "no frontmatter")
 		return

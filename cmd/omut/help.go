@@ -96,7 +96,8 @@ With --private, for a repository that is not yours:
   AGENTS.md, CLAUDE.md, .gitignore and all tracked files don't change: git
   status stays empty.
   Claude Code reads CLAUDE.local.md. Codex has no such file: give it the
-  session-start hook (omut help hook) or this line in ~/.codex/AGENTS.md:
+  session-start hook (omut help hook), review it with /hooks and start a new
+  session; or, in the main checkout, this line in ~/.codex/AGENTS.md:
     If the repository has .omut/, keep its meta by .omut/README.md.
   To share the meta later: remove the omut lines from .git/info/exclude, move
   this copy's facts to .omut/local/, run omut zero, commit .omut/.
@@ -142,6 +143,7 @@ Rules:
 ` + checkRulesText() + `
 A few shape findings are warnings. A freshly laid template is not broken: it
 gives unfilled and unverified, not errors.
+A clean report checks shape and freshness, not the truth of the recorded claims.
 
 --json prints an array, [] when all is good, of
   {"project", "rule", "level", "file", "line", "message"}
@@ -304,7 +306,7 @@ var checkRules = []checkRule{
 	{"shape", "error", `a missing field or section, a wrong status, a repeated Dn, a broken link`},
 	{"scaffold", "error", `the pack root lacks a tool or meta file; zero fixes it`},
 	{"local-in-git", "error", `git tracks files of .omut/local/`},
-	{"size", "warn", `brief over 60 lines, a thread over 80, log over 50 entries`},
+	{"size", "warn", `brief over 60 lines / 6000 Unicode characters, a thread over 80 / 8000; log over 50 entries`},
 	{"stale-brief", "warn", `the project changed after the brief's "updated"`},
 	{"unverified", "warn", `an active project's "verified" is empty or over 30 days old`},
 	{"unseen", "warn", `in an active project, a claim with how: not seen for 30 days`},

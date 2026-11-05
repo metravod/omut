@@ -5,7 +5,7 @@ This directory holds the project's meta in the [omut](https://github.com/metravo
 
 ## Reading it
 
-1. `brief.md`: why, what it is, where it runs, what works now, what comes next. At most 60 lines; start here.
+1. `brief.md`: why, what it is, where it runs, what works now, what comes next. At most 60 lines and 6000 Unicode characters; start here.
 2. `decisions.md`: one line per decision, with the reason. `open` and `doubted` ones wait for an answer.
 3. `threads/`: unfinished work, each thread with its next step.
 4. `log.md`: one line per session, newest first.
@@ -16,7 +16,9 @@ Reading needs nothing installed. If you are only reading, you don't write anythi
 
 ## Keeping it
 
-If you work on the project, keep the meta by the rules below. `omut check` checks their shape and freshness, but the rules work without the tool.
+If you work on the project, keep the meta by the rules below. `omut check` checks their shape and recorded freshness, not whether their contents are true. Agents and humans verify the claims. The rules work without the tool.
+
+Size budgets count the whole file, including frontmatter and comments, after normalizing line endings and excluding the final newline. Unicode characters are code points, not bytes or tokens. Keep the brief focused on the present; move history and detailed evidence behind links.
 
 Headings, field names and labels stay as below: `check` looks for them. Write the text itself in the language the project's people use.
 
@@ -33,20 +35,20 @@ The test for a fact: would a stranger who clones the repository need it, and is 
 
 ### Files
 
-**`brief.md`: the project's brief. Always read, at most 60 lines.**
+**`brief.md`: the project's brief. Always read, at most 60 lines and 6000 Unicode characters.**
 Frontmatter: `status` (`active` | `frozen`), `updated` (when the text changed), `verified` (when "Where it lives" and "Now" were last checked against reality), `by` (`agent/model`, the tool that writes and its model, such as `claude-code/opus-5.5`), optional `adr` (the project's ADR directory).
 Sections, all required:
 - **Why**: the original intent, 1–3 lines. Never rewritten after the fact: a changed intent is a decision in `decisions.md`.
 - **What it is**: how it works, 3–10 lines, for a human. Links to the project's key documents.
 - **Where it lives**: the public footprint, with dates: the repository, releases, packages, public sites, external documents. This copy's machine and servers go to `local/instance.md`. Empty means it is published nowhere.
-- **Now**: what works, what is broken. Lines `**Verified:**` (how) and `**Not verified:**`.
+- **Now**: the current state, not the release history. Link to logs and detailed checks instead of copying them. Lines `**Verified:**` (how) and `**Not verified:**`.
 - **Next**: 3–7 items. Small ideas live here too.
 
 **`decisions.md`: the decision registry.** One line per decision:
 `- D7 [accepted 2026-09-10] What was decided, why, what was rejected → link`
 Statuses: `open` (not decided, there are options; may say since when: `[open 2026-09-10]`), `accepted`, `doubted` (decided, but there is a doubt), `superseded → Dn`. If the project has ADRs (`adr:` in the brief), they are the registry for the decisions they record: don't copy them here; `decisions.md` holds the decisions without an ADR, and a line at its top says where the ADRs are. `check` reads an ADR's status from frontmatter, a `Status:` line or a `## Status` section: `proposed` or `draft` waits for the human like `open`, `Firmness: tentative` like `doubted`, no status counts as decided. A registry that already mirrors its ADRs may stay as it is; new ADRs are not copied. Without ADRs, the reason goes right into the line, 1–3 sentences; if it doesn't fit, that's a reason to write an ADR. Lines are never deleted; a decision changes through `superseded`. A neighbouring project's decision is a link: `→ ../<neighbour>/.omut/decisions.md`.
 
-**`threads/<slug>.md`: a thread of work**, only for work on substance (ideas without work go to "Next"). At most 80 lines.
+**`threads/<slug>.md`: a thread of work**, only for work on substance (ideas without work go to "Next"). At most 80 lines and 8000 Unicode characters.
 Frontmatter: `status` (`active` | `parked` | `done` | `dropped`), `updated`, `by`, and for `parked`, `parked_because`:
 - `stamina`, `limits`: continue from the same spot;
 - `doubt`: resolve the doubt first (often together with a `doubted` decision);

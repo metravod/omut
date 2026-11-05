@@ -104,7 +104,7 @@ If there is no `CLAUDE.md`, `init` and `start` make it a symlink to `AGENTS.md`.
 
 ## 5. Project meta
 
-### brief.md: always read, budget ≤ 60 lines
+### brief.md: always read, budget ≤ 60 lines and 6000 Unicode characters
 
 ```markdown
 ---
@@ -243,7 +243,7 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 |---|---|---|
 | `no-meta` | error | a root subdirectory without `.omut/` (except `ignore` and hidden ones) |
 | `shape` | error | a missing required frontmatter field or section, a wrong status, a repeated Dn, a broken link |
-| `size` | warn | `brief.md` > 60 lines, a thread > 80 lines, `log.md` > 50 entries (time to rotate) |
+| `size` | warn | `brief.md` > 60 lines or 6000 Unicode characters, a thread > 80 lines or 8000 Unicode characters; `log.md` > 50 entries (time to rotate). Count the complete normalized markdown, including frontmatter and comments, excluding the final newline; characters are Unicode code points, not UTF-8 bytes or model tokens |
 | `stale-brief` | warn | the project has changes newer than `updated`, `.omut/` aside. With git: the last commit that touched anything outside `.omut/`, plus the mtimes of changed and untracked files (a fresh clone is not a change). Without git: the mtime of files outside hidden directories. A symlinked project is followed to its target |
 | `unverified` | warn | an active project whose `verified` is empty or older than 30 days |
 | `unseen` | warn | in an active project, a claim with `how` whose `seen` is missing or older than 30 days (§5) |
@@ -262,7 +262,7 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 
 A fresh template is not a shape error but `unfilled` and `unverified`: shape errors are kept for what is broken.
 
-`check` doesn't look inside other artifacts: the format of ADRs and docs is not its business.
+`check` doesn't look inside other artifacts: the format of ADRs and docs is not its business. A clean report establishes shape and recorded freshness, not the truth of an agent's claims.
 
 ## 9. Rituals
 
@@ -303,7 +303,7 @@ The rituals are written in the tool files. Any agent carries them out.
 ## 12. Open questions
 
 1. **Finished threads** (`done`/`dropped`): fold the substance into decisions and the log and delete the file, or keep `threads/archive/`. For now the files stay.
-2. **`check` thresholds** are fixed (60/80 lines, 30/14 days, 50 entries). Overrides if they turn out to be needed.
+2. **`check` thresholds** are fixed (60/80 lines and 6000/8000 Unicode characters, 30/14 days, 50 entries). Overrides if they turn out to be needed.
 3. **`kill --keep-files`.** Not for now: a symlinked project is removed without its files anyway.
 4. **Codex and `AGENTS.md` above the git root:** check by hand.
 5. **Migrating from drift:** a one-off script, not a command.
