@@ -296,6 +296,10 @@ func TestContextWorktreeLayers(t *testing.T) {
 			write(t, filepath.Join(repo, "docs/notes.md"), "# notes\n")
 			instance := filepath.Join(repo, ".omut/local/instance.md")
 			write(t, instance, strings.Replace(read(t, instance), "## Runbook", "## Runbook\nMAIN-CHECKOUT-ONLY", 1))
+			planPointer(t, filepath.Join(repo, ".omut/brief.md"), "docs/work.md")
+			write(t, filepath.Join(repo, "docs/work.md"), "MAIN-PROJECT-PLAN\n")
+			planPointer(t, instance, "work/README.md")
+			write(t, filepath.Join(repo, ".omut/local/work/README.md"), "MAIN-LOCAL-PLAN\n")
 			git(t, repo, "add", "-A")
 			git(t, repo, "commit", "-qm", "meta")
 			git(t, repo, "worktree", "add", "-q", wt)
@@ -304,6 +308,7 @@ func TestContextWorktreeLayers(t *testing.T) {
 			if !private {
 				path := filepath.Join(wt, ".omut/brief.md")
 				write(t, path, strings.Replace(read(t, path), "Works.", "BRANCH-ONLY", 1))
+				write(t, filepath.Join(wt, "docs/work.md"), "BRANCH-PROJECT-PLAN\n")
 			}
 			r, out, err := contextReport(t, wt)
 			if err != nil || r.Scope != "project" || len(r.Projects) != 1 {
@@ -322,6 +327,16 @@ func TestContextWorktreeLayers(t *testing.T) {
 				}
 			} else if p.Dir != wt || !strings.Contains(out, "BRANCH-ONLY") || exists(filepath.Join(wt, ".omut/local")) {
 				t.Error("branch and instance layers were mixed")
+			}
+			wantPlan := "BRANCH-PROJECT-PLAN"
+			if private {
+				wantPlan = "MAIN-PROJECT-PLAN"
+			}
+			if !strings.Contains(out, wantPlan) || !strings.Contains(out, "MAIN-LOCAL-PLAN") {
+				t.Errorf("plan layers mixed: %s", out)
+			}
+			if hook := must(t, wt, "hook", "start"); !strings.Contains(hook, wantPlan) || !strings.Contains(hook, "MAIN-LOCAL-PLAN") {
+				t.Errorf("hook lost worktree plans: %s", hook)
 			}
 			assertContextSources(t, r, must(t, wt, "context"))
 			for _, f := range r.Findings {

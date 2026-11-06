@@ -32,7 +32,7 @@ The meta can be checked. The lead doesn't just read what is written, it compares
 ## 3. What it doesn't do
 
 - No code review, no diffs.
-- Not a task tracker: no sprints, no estimates.
+- No task-tracker runtime: no sprints, estimates, assignment commands or automatic scheduling. An optional Markdown work plan records goals and tasks (§5).
 - Not an orchestrator of parallel agents.
 - Not the working memory of the current task. That is another layer, such as planning-with-files.
 - Doesn't store the user's personal preferences. That is a particular agent's memory.
@@ -113,6 +113,7 @@ updated: 2026-10-31         # when the text changed
 verified: 2026-10-31        # when "Where it lives" and "Now" were checked against reality
 by: claude-code/opus-5.5
 adr: docs/adr               # optional: where the project's ADRs are
+plan: docs/work-plan.md     # optional: work plan, relative to project root
 ---
 ## Why
 The original intent, 1–3 lines. Never rewritten after the fact: a changed intent is a decision in decisions.md.
@@ -129,7 +130,7 @@ What works, what is broken.
 **Not verified:** ...
 
 ## Next
-A short plan, 3–7 items. Small ideas live here too.
+A shortlist, 3–7 items. Small ideas live here too. With a work plan, point to next available work and important gates instead of mirroring the backlog.
 ```
 
 Headings, field names and labels are fixed because `check` looks for them. The text itself is written in whatever language the project's people use.
@@ -140,6 +141,7 @@ Headings, field names and labels are fixed because `check` looks for them. The t
 ---
 updated: 2026-11-03
 by: claude-code/opus-5.5
+plan: work/README.md        # optional: relative to .omut/local/
 ---
 ## Where it lives
 This machine (the checkout, symlinks, installs, virtualenvs, agents' configs), servers, containers, cron, data, backups, with dates.
@@ -199,6 +201,18 @@ parked_because: doubt       # parked only: stamina | doubt | blocked | limits | 
 - **Parking reasons:** `stamina` and `limits`: continue from the same spot; `doubt`: resolve the doubt first (often together with a `doubted` decision); `blocked`: waiting on something external; `priority`: deliberately put aside for something else; `unknown`: the reason was never recorded, only for threads reconstructed during adoption.
 - **Threads are only for work on substance.** Ideas without work live in "Next" in `brief.md`.
 
+### Optional work plans: goals and tasks
+
+A project may set `plan: docs/work-plan.md` in the brief's frontmatter. This copy may independently set `plan: work/README.md` in `local/instance.md`, relative to `.omut/local/` in the main checkout. The project pointer is branch-owned; the local pointer follows D17. Absence means no plan, not an error. Both may exist for different work; the same task's state has one authoritative location. Existing visibility choices are preserved.
+
+Each pointer names one regular `.md` file within its layer. Absolute paths, paths escaping the base via `..` or symlinks, missing/unreadable files, directories and special files are shape errors. A project pointer cannot resolve into `.omut/local/`, even via a symlink: put that pointer in the instance file. The CLI reads no linked cards, follows no nested plan pointers, migrates no existing plans and creates no plan automatically on `start` or `zero`.
+
+Existing plans are adopted as they are: no frontmatter, headings or task syntax are required. For a new plan, the recommended outline is a dated index grouped by goals, each with an observable completion condition, and tasks with stable IDs, state, dependencies, acceptance criteria or a link to a detailed card. Suggested task states are `todo`, `active`, `blocked`, `done`, `dropped`; name the active owner and explain blocks. Separate logical dependencies from integration order. These are writing conventions, not machine-interpreted statuses or a dependency solver. The example travels in the project rules (`omut help meta`).
+
+Keep the selected index at most 80 lines and 8000 Unicode characters, counted like threads. Detailed instructions and tests stay behind links. The task index or the cards own task state, never both; the brief's Next is a shortlist and threads hold continuation of work actually started. Don't generate an empty thread for every planned task or reorganize another writer's active package without a handoff. On completion, update the authoritative task state before the brief/log.
+
+`check` checks the pointer, readability and size, not plan links, task syntax, dependency correctness, readiness or truth. Oversize plans warn; context retains the whole file with provenance, without truncation. Project plans appear in pack overviews and project context. Local plans appear only in project context, even if the instance file otherwise has empty sections. Project startup includes both plans; the pack startup uses the overview. Frozen projects' plans stay out of the pack overview but remain available in project context. Selection does not verify or authorize task execution.
+
 ### log.md: history, newest first
 
 ```markdown
@@ -228,10 +242,11 @@ At the pack root, the overview includes:
 - the pack's full brief and decisions;
 - each project's name, locations, visibility, status, updated/verified dates and complete **Why**, **What it is**, **Now** and **Next** sections;
 - `open`/`doubted` project decision lines and the literal titles (or status lines if untitled) and waiting statuses of ADRs recognized by §5;
+- the full explicitly selected project work plan, when set (local plans are omitted);
 - active/parked thread titles and **Goal**, **Open**, **Next step** fields, including continuation lines, with status, updated date, author and parking reason;
 - the existing `check` findings and local Git observations for the pack root and projects. Frozen projects contribute brief sections and Git observations; their pending records are omitted, while `check` findings remain visible.
 
-The pack overview omits project footprints, local memory, project logs, completed/dropped threads and decided project records. Naming a project (or running inside it) includes its full brief and decisions, full active/parked threads, full waiting ADRs, filled `local/instance.md`, the latest five entries of each log and `check` findings. Completed/dropped threads, decided ADR bodies and older history stay in their source files. All decisions in `decisions.md` remain available in the project view, even for a frozen project. The absence of an empty `threads/` is normal: git does not preserve empty directories.
+The pack overview omits project footprints, local memory, project logs, completed/dropped threads and decided project records. Naming a project (or running inside it) includes its full brief and decisions, full active/parked threads, full waiting ADRs, selected project and local plans, filled `local/instance.md`, the latest five entries of each log and `check` findings. Completed/dropped threads, decided ADR bodies and older history stay in their source files. All decisions in `decisions.md` remain available in the project view, even for a frozen project. The absence of an empty `threads/` is normal: git does not preserve empty directories.
 
 Every excerpt carries its source file and 1-based starting line. Only line endings are normalized; there is no summarization or text truncation. Paths, including finding paths, are relative to the report's root; worktrees retain branch meta and main-checkout local/private memory (D17). Project and file order is stable; freshness depends on the date and filesystem/git state. Each output states its selection policy and date. Invalid selected records remain visible or are reported by shape findings; read and enumeration failures are explicit. A report with read or shape errors is marked incomplete and exits 1, retaining readable records; warnings alone exit 0. An absent optional local layer is normal, but a dangling symlink or another read failure is reported.
 
@@ -267,8 +282,8 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | Code | Level | Condition |
 |---|---|---|
 | `no-meta` | error | a root subdirectory without `.omut/` (except `ignore` and hidden ones) |
-| `shape` | error | a missing required frontmatter field or section, a wrong status, a repeated Dn, a broken link |
-| `size` | warn | `brief.md` > 60 lines or 6000 Unicode characters, a thread > 80 lines or 8000 Unicode characters; `log.md` > 50 entries (time to rotate). Count the complete normalized markdown, including frontmatter and comments, excluding the final newline; characters are Unicode code points, not UTF-8 bytes or model tokens |
+| `shape` | error | a missing required frontmatter field or section, a wrong status, a repeated Dn, a broken link; an explicit plan pointer is invalid, outside its layer, unreadable or not a regular Markdown file |
+| `size` | warn | `brief.md` > 60 lines or 6000 Unicode characters, a thread or selected plan > 80 lines or 8000 Unicode characters; `log.md` > 50 entries (time to rotate). Count the complete normalized markdown, including frontmatter and comments, excluding the final newline; characters are Unicode code points, not UTF-8 bytes or model tokens |
 | `stale-brief` | warn | the project has changes newer than `updated`, `.omut/` aside. With git: the last commit that touched anything outside `.omut/`, plus the mtimes of changed and untracked files (a fresh clone is not a change). Without git: the mtime of files outside hidden directories. A symlinked project is followed to its target |
 | `unverified` | warn | an active project whose `verified` is empty or older than 30 days |
 | `unseen` | warn | in an active project, a claim with `how` whose `seen` is missing or older than 30 days (§5) |
@@ -294,7 +309,7 @@ A fresh template is not a shape error but `unfilled` and `unverified`: shape err
 The rituals are written in the tool files. Any agent carries them out.
 
 **Inside a project** (`.omut/README.md`):
-- **Session start.** Read `brief.md`, the active and parked threads, `open` and `doubted` decisions. If a thread says "Verified", rerun that check before continuing.
+- **Session start.** Read `brief.md`, explicitly selected work plans, the active and parked threads, `open` and `doubted` decisions. If a thread says "Verified", rerun that check before continuing.
 - **A decision is made.** An ADR, if the project keeps them; a line in `decisions.md` otherwise.
 - **A piece of work is done, or parked.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md`, before telling the human the work is done and before a commit; what changed only in this copy goes to `local/`. Not "at session end": no agent sees it. The result must be checkable: what was done, what was verified and how, what was not, the next step.
 - **Moving the project.** The meta moves with the directory; what breaks is outside it (symlinks into it, absolute paths in agents' settings, virtualenvs, agents' memory kept by path, cron). Go through "Where it lives", search for the old path, record the move.

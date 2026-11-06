@@ -10,6 +10,8 @@ This directory holds the project's meta in the [omut](https://github.com/metravo
 3. `threads/`: unfinished work, each thread with its next step.
 4. `log.md`: one line per session, newest first.
 
+If the brief has `plan:`, read that work plan too. A local plan, when set in `local/instance.md`, belongs to this copy only. Plans are optional; projects without them keep working as before.
+
 `local/` is not in git: each copy of the project keeps its own there (see "Two layers").
 
 Reading needs nothing installed. If you are only reading, you don't write anything here.
@@ -36,13 +38,13 @@ The test for a fact: would a stranger who clones the repository need it, and is 
 ### Files
 
 **`brief.md`: the project's brief. Always read, at most 60 lines and 6000 Unicode characters.**
-Frontmatter: `status` (`active` | `frozen`), `updated` (when the text changed), `verified` (when "Where it lives" and "Now" were last checked against reality), `by` (`agent/model`, the tool that writes and its model, such as `claude-code/opus-5.5`), optional `adr` (the project's ADR directory).
+Frontmatter: `status` (`active` | `frozen`), `updated` (when the text changed), `verified` (when "Where it lives" and "Now" were last checked against reality), `by` (`agent/model`, the tool that writes and its model, such as `claude-code/opus-5.5`), optional `adr` (the project's ADR directory), optional `plan` (a Markdown work plan, relative to the project root).
 Sections, all required:
 - **Why**: the original intent, 1–3 lines. Never rewritten after the fact: a changed intent is a decision in `decisions.md`.
 - **What it is**: how it works, 3–10 lines, for a human. Links to the project's key documents.
 - **Where it lives**: the public footprint, with dates: the repository, releases, packages, public sites, external documents. This copy's machine and servers go to `local/instance.md`. Empty means it is published nowhere.
 - **Now**: the current state, not the release history. Link to logs and detailed checks instead of copying them. Lines `**Verified:**` (how) and `**Not verified:**`.
-- **Next**: 3–7 items. Small ideas live here too.
+- **Next**: 3–7 items. Small ideas live here too. With a work plan, point to the next available work and important gates; don't mirror the entire backlog here.
 
 **`decisions.md`: the decision registry.** One line per decision:
 `- D7 [accepted 2026-09-10] What was decided, why, what was rejected → link`
@@ -58,7 +60,28 @@ Frontmatter: `status` (`active` | `parked` | `done` | `dropped`), `updated`, `by
 
 Body: `# Title`, then the lines `**Goal:**`, `**Where we got:**`, `**Verified:**` / `**Not verified:**`, `**Open:**`, `**Next step:**`.
 
-**`local/instance.md`: this copy's memory.** Not in git. Frontmatter: `updated`, `by`. Sections: **Where it lives** (this machine, servers, containers, cron, data, backups, with dates), **Access** (where the secrets, tokens and accounts are kept, never the values), **Runbook** (deploy, roll back, restart, move). `local/log.md` is this copy's events in the log format: deployed, moved, rotated a token.
+**Optional work plans: goals and tasks.** Add `plan: docs/work-plan.md` to the brief's frontmatter, or `plan: work/README.md` to `local/instance.md` for a copy-only package (relative to `.omut/local/`, kept in the main checkout). Both may exist for different work; never mirror the same task's state between them. Keep the human's existing choice of visibility. A project plan cannot point into `local/`, including through a symlink. Each pointer names one regular `.md` file within its layer; absolute paths and escapes through `..` or symlinks are rejected.
+
+Adopt an existing plan as it is; don't make a second registry. No frontmatter, headings or task syntax are required in that file. For a new plan, use this outline:
+
+```markdown
+# Work plan
+Updated: YYYY-MM-DD. Task state is kept in this index.
+
+## Goal: the downloaded file matches the answer
+Done when: changing the database after an answer does not change its download.
+
+| Task | State | Depends on | Detail / acceptance |
+| --- | --- | --- | --- |
+| A: reproduce changed download | todo | — | [Card](cards/a.md) |
+| B: save the answer artifact | todo | A | [Card](cards/b.md) |
+```
+
+Use stable task IDs. A task says what result counts as done, its dependencies, and who owns it while active; useful states are `todo`, `active`, `blocked`, `done`, `dropped`. Record why work is blocked. Distinguish a logical dependency from an integration order chosen to avoid editing conflicts. Keep statuses in either the index or the cards, never both. Detailed instructions, evidence and tests stay in the linked artifacts. Started work that needs continuation gets a thread linking back to the task; don't create empty threads for the whole backlog. Update the authoritative task state when work finishes, before updating the brief/log. Don't take another writer's active task or reorganize their package without a handoff.
+
+Keep the selected index within 80 lines and 8000 Unicode characters. `check` checks its path, readability and size, not task statuses, links, dependencies or readiness. `context` includes the whole project plan in the pack overview and project view; local plans appear only in the project view. Project startup includes both. Source paths locate relative links; cards are never followed automatically. Oversize plans warn, without truncation or rewriting. The CLI never creates a plan automatically, edits it, assigns work or marks anything done.
+
+**`local/instance.md`: this copy's memory.** Not in git. Frontmatter: `updated`, `by`, optional `plan` (relative to this directory). Sections: **Where it lives** (this machine, servers, containers, cron, data, backups, with dates), **Access** (where the secrets, tokens and accounts are kept, never the values), **Runbook** (deploy, roll back, restart, move). `local/log.md` is this copy's events in the log format: deployed, moved, rotated a token.
 
 **Claims about reality.** Every `- ` line of "Where it lives" (in `brief.md` and `local/instance.md`) and of "Access" is a claim. Give it a way to check it and the date it was last checked:
 `- skill adr: ~/.claude/skills/adr → this checkout · how: readlink ~/.claude/skills/adr · seen 2026-11-03`
@@ -70,7 +93,7 @@ One or two lines per session, details by link to a thread or a decision. The aut
 
 ### Rituals
 
-- **Session start.** Read `brief.md`, the `active` and `parked` threads, the `open` and `doubted` decisions. If a thread says "Verified", rerun that check before continuing.
+- **Session start.** Read `brief.md`, explicitly selected plans, the `active` and `parked` threads, the `open` and `doubted` decisions. If a thread says "Verified", rerun that check before continuing.
 - **Checking a claim.** Run its `how` (ask the human first where it touches servers or anything outside this directory) and compare with the claim. It holds: set `seen` to today. It doesn't: tell the human and fix the line with them, never silently. Note in `local/log.md` what you saw, not just "checked".
 - **Looking for the footprint** (adopting, moving, "is anything else running?"). Search for the project's path and name where footprints hide: agents' skills (`~/.claude/skills`, `~/.codex/skills`, `~/.agents/skills`), MCP configs (`~/.claude.json`, `.mcp.json`, `~/.codex/config.toml`, `~/.cursor/mcp.json`), agents' settings and memory kept by path (`~/.claude/settings.json`, `~/.claude/projects/`), binaries and tool installs (`~/.local/bin`, `uv tool list`, `pipx list`, `brew list`, `npm ls -g`), services and schedules (`crontab -l`, `~/Library/LaunchAgents`, `systemctl --user list-units`), containers (`docker ps -a`, compose files), shell profiles (aliases, `PATH`). Anything found that is not written down goes to `local/instance.md`, or to the human.
 - **A decision is made.** An ADR, if the project keeps them; a line in `decisions.md` otherwise.

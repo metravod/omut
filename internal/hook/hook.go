@@ -62,6 +62,7 @@ func startProject(pl pack.Place) string {
 	if text, err := os.ReadFile(filepath.Join(lead, pack.Brief)); err == nil {
 		b.WriteString("\n## .omut/brief.md\n\n")
 		b.WriteString(strings.TrimRight(string(text), "\n") + "\n")
+		writePlan(&b, dir, meta.Parse(filepath.Join(lead, pack.Brief), string(text)), false)
 	}
 	writeInstance(&b, filepath.Join(pl.Instance, pack.MetaDir))
 
@@ -190,10 +191,11 @@ func writeInstance(b *strings.Builder, lead string) {
 		for _, s := range d.Sections() {
 			filled = filled || d.Filled(s)
 		}
-		if filled {
+		if filled || d.Front["plan"] != "" {
 			b.WriteString("\n## .omut/local/instance.md (this copy only, never in git)\n\n")
 			b.WriteString(strings.TrimRight(strings.Join(d.Lines, "\n"), "\n") + "\n")
 		}
+		writePlan(b, filepath.Dir(lead), d, true)
 	}
 	if d, err := meta.Read(filepath.Join(local, pack.Log)); err == nil {
 		entries, _ := d.LogEntries()
@@ -206,6 +208,17 @@ func writeInstance(b *strings.Builder, lead string) {
 				b.WriteString(d.Lines[e.Line-1] + "\n")
 			}
 		}
+	}
+}
+
+func writePlan(b *strings.Builder, dir string, owner *meta.Doc, local bool) {
+	d, err := pack.ReadPlan(dir, owner, local)
+	if err != nil {
+		fmt.Fprintf(b, "\n## Incomplete plan context\n\n`%s:%d`: %v\n", owner.Path, owner.FrontLine["plan"], err)
+		return
+	}
+	if d != nil {
+		fmt.Fprintf(b, "\n## Work plan — `%s:1`\n\n%s\n", d.Path, strings.Join(d.Lines, "\n"))
 	}
 }
 

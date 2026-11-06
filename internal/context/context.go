@@ -16,8 +16,8 @@ import (
 	"github.com/metravod/omut/internal/pack"
 )
 
-const packSelection = "Pack brief and decisions; each project's Why, What it is, Now and Next; open/doubted decisions and waiting ADR titles; unfinished thread titles, Goal, Open and Next step. Frozen projects: brief and Git observation only. Project footprints, local memory, logs, completed threads and decided project records are omitted; use omut context <project> for current project records. Git observations include branch/upstream, local ahead/behind and changed paths, with no fetch or full diffs."
-const projectSelection = "Full brief and decisions; full active/parked threads and waiting ADRs; filled local instance memory and the latest five entries of each log. Completed/dropped threads, decided ADR bodies and older history are omitted. Invalid selected records and read failures are reported. Git observations include branch/upstream, local ahead/behind and changed paths, with no fetch or full diffs."
+const packSelection = "Pack brief and decisions; each project's Why, What it is, Now and Next; open/doubted decisions and waiting ADR titles; unfinished thread titles, Goal, Open and Next step; explicit project plans in full (no linked cards). Frozen projects: brief and Git observation only. Project footprints, local memory, logs, completed threads and decided project records are omitted; use omut context <project> for current project records. Git observations include branch/upstream, local ahead/behind and changed paths, with no fetch or full diffs."
+const projectSelection = "Full brief and decisions; full active/parked threads and waiting ADRs; filled local instance memory, explicit project/local plans in full (no linked cards), and the latest five entries of each log. Completed/dropped threads, decided ADR bodies and older history are omitted. Invalid selected records and read failures are reported. Git observations include branch/upstream, local ahead/behind and changed paths, with no fetch or full diffs."
 
 // Source is a literal excerpt. Line is 1-based; only line endings are
 // normalized. File is relative to Report.Root, possibly outside it for local
@@ -234,6 +234,7 @@ func (r *Report) project(name string, pl pack.Place, overview bool) Project {
 	r.threads(&p, lead, overview)
 	if brief != nil {
 		r.adrs(&p, brief, overview)
+		r.plan(&p, brief, false)
 	}
 	if !overview {
 		local := filepath.Join(pl.Instance, pack.MetaDir, pack.Local)
@@ -243,14 +244,30 @@ func (r *Report) project(name string, pl pack.Place, overview bool) Project {
 			}
 		}
 		if d := r.read(filepath.Join(local, pack.Instance), true); d != nil {
-			if slices.ContainsFunc(d.Sections(), d.Filled) {
+			if d.Front["plan"] != "" || slices.ContainsFunc(d.Sections(), d.Filled) {
 				p.Sources = append(p.Sources, r.source("instance", d, 0, len(d.Lines)))
 			}
+			r.plan(&p, d, true)
 		}
 		r.log(&p, filepath.Join(lead, pack.Log), false)
 		r.log(&p, filepath.Join(local, pack.Log), true)
 	}
 	return p
+}
+
+func (r *Report) plan(p *Project, owner *meta.Doc, local bool) {
+	d, err := pack.ReadPlan(p.Dir, owner, local)
+	if err != nil {
+		r.problem(owner.Path, fmt.Errorf("plan at line %d: %w", owner.FrontLine["plan"], err))
+		return
+	}
+	if d != nil {
+		kind := "plan"
+		if local {
+			kind = "local-plan"
+		}
+		p.Sources = append(p.Sources, r.source(kind, d, 0, len(d.Lines)))
+	}
 }
 
 func (r *Report) threads(p *Project, lead string, overview bool) {

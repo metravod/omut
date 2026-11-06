@@ -3,6 +3,7 @@ status: active
 updated: {{date}}
 verified:
 by: {{by}}
+# Optional: plan: docs/work-plan.md (relative to the project root)
 ---
 ## Why
 <!-- The original intent, 1–3 lines. If you don't know, say so and ask the human. -->

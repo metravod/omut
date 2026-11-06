@@ -32,6 +32,8 @@ const (
 	BriefChars    = 6000
 	ThreadLines   = 80
 	ThreadChars   = 8000
+	PlanLines     = 80
+	PlanChars     = 8000
 	LogEntries    = 50
 	VerifyDays    = 30
 	StalledDays   = 14
@@ -170,6 +172,7 @@ func project(base, dir, name string, opt Options, dead []string) []Finding {
 		checkBrief(r, brief, dir, opt)
 		checkRefs(r, brief, dir)
 		checkADR(r, brief, dir, brief.Front["status"] == "frozen")
+		checkPlan(r, dir, brief, false)
 	}
 	if d, err := meta.Read(filepath.Join(lead, pack.Decisions)); err == nil {
 		checkDecisions(r, d, brief != nil && brief.Front["status"] == "frozen")
@@ -195,6 +198,13 @@ func project(base, dir, name string, opt Options, dead []string) []Finding {
 		checkClaims(r, brief, opt, briefClaimSections...)
 	}
 	checkInstance(r, dir, opt, active)
+	instance := dir
+	if main := pack.MainPath(dir); main != "" {
+		instance = main
+	}
+	if d, err := meta.Read(filepath.Join(instance, pack.MetaDir, pack.Local, pack.Instance)); err == nil {
+		checkPlan(r, dir, d, true)
+	}
 	// Private meta (D16) is all this copy's: nothing in it goes to git,
 	// so nothing leaks, and the pointer is a local file.
 	if pack.Private(dir) {
@@ -211,6 +221,17 @@ func project(base, dir, name string, opt Options, dead []string) []Finding {
 }
 
 var briefSections = []string{"Why", "What it is", "Where it lives", "Now", "Next"}
+
+func checkPlan(r *report, dir string, owner *meta.Doc, local bool) {
+	d, err := pack.ReadPlan(dir, owner, local)
+	if err != nil {
+		r.add("shape", Error, owner.Path, owner.FrontLine["plan"], "plan: %v", err)
+		return
+	}
+	if d != nil {
+		checkSize(r, d, PlanLines, PlanChars)
+	}
+}
 
 func checkSize(r *report, d *meta.Doc, lines, characters int) {
 	// Count the normalized markdown, including frontmatter and comments. A

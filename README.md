@@ -87,6 +87,14 @@ If the project keeps ADRs, they stay the decision registry: point the brief at t
 
 The brief has both a line and a volume budget: 60 lines and 6000 Unicode characters; each thread has 80 lines and 8000 characters. Keep the brief about the current state and link to history and detailed evidence. `check` warns when either budget is exceeded; it does not shorten anyone's notes.
 
+An optional `plan: docs/work-plan.md` in the brief connects an existing Markdown
+plan: goals, tasks, dependencies and acceptance criteria. Keep task state in one
+place; Next points to the immediate work, and threads preserve continuation.
+Copy-only packages use `plan:` in `.omut/local/instance.md`, relative to that
+directory. Shared plans reach the pack overview; local plans reach only project
+context. Cards stay behind links. No plan is created or migrated automatically.
+See `omut help meta` for the outline and ownership rules.
+
 ## Stop using omut
 
 Your notes remain ordinary files. Keep or archive them before removing anything.
@@ -113,11 +121,11 @@ omut context hn-parser          # full current records of one project
 
 An agent started in the root is the lead: it knows the whole pack and tells you what is where. Started in a project, it keeps that project's meta.
 
-The lead's startup hook supplies the same overview as `omut context`: pack context, project status and current brief sections, waiting decisions, unfinished thread summaries, check findings and local Git observations. The CLI collects literal records with source paths and lines; the agent interprets them. It needs no model calls to discover and assemble the files.
+The lead's startup hook supplies the same overview as `omut context`: pack context, project status and current brief sections, waiting decisions, unfinished thread summaries, selected project plans, check findings and local Git observations. The CLI collects literal records with source paths and lines; the agent interprets them. It needs no model calls to discover and assemble the files.
 
 Git observations include the branch/upstream, ahead/behind from local refs, changed/staged/untracked paths, renames and conflicts. The lead can use this for an ordinary overview and open a specific diff when it matters. Changes are scoped to the project; branch/divergence describe its repository. No fetch or full diff is included. Private worktrees show the working copy's status while keeping meta in the main checkout. Projects without a Git working tree say so; Git failures are explicit and mark the output incomplete. Git status reads disable optional index refresh and fsmonitor hooks.
 
-The overview omits project footprints, local memory, logs and decided project records; `omut context <project>` includes the full brief and decisions, unfinished threads, waiting ADRs, filled local memory and the latest five entries from each log. Completed threads and older history remain in their source files. Read/Git failures and shape errors mark the output incomplete and return exit 1; warnings remain visible with exit 0. `--json` exposes the same selection for other tools. This reduces file-discovery calls; token savings depend on how much context is selected.
+The overview omits project footprints, local memory, logs and decided project records; `omut context <project>` includes the full brief and decisions, unfinished threads, waiting ADRs, selected project/local plans, filled local memory and the latest five entries from each log. Completed threads and older history remain in their source files. Read/Git failures and shape errors mark the output incomplete and return exit 1; warnings remain visible with exit 0. `--json` exposes the same selection for other tools. This reduces file-discovery calls; token savings depend on how much context is selected.
 
 | Command | What it does |
 |---|---|

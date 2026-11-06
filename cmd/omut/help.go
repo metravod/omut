@@ -173,12 +173,14 @@ Pack overview:
   project status, updated/verified, Why, What it is, Now and Next
   open/doubted decision lines and waiting ADR titles/statuses
   unfinished thread titles, Goal, Open and Next step, with status and owner
+  full project work plan when plan: is set in the brief
   check findings, including stale briefs and stalled threads
   frozen projects: brief sections and Git observations, with no pending records
 
 Project records:
   full brief and decisions, active/parked threads and waiting ADR bodies
   filled local instance memory; the latest five entries from each log
+  selected project and local plans (local plan: in local/instance.md)
   check findings; private and main-checkout/worktree locations when applicable
 
 Git observations (for the pack root and every project, including frozen ones):
@@ -329,6 +331,7 @@ no hook itself: those files are yours. In a linked worktree it finds the clone's
 meta in the main checkout and gives the agent the full path.
 
   start    at an agent's session start: prints the brief, this copy's memory,
+           explicit project/local work plans (without following cards),
            decisions waiting for the human, unfinished threads, what check
            found, claims due for checking, and work newer than the log that no
            commit holds. In a pack root: tells the agent it is the lead and
@@ -363,10 +366,10 @@ type checkRule struct{ code, level, when string }
 
 var checkRules = []checkRule{
 	{"no-meta", "error", `a directory of the pack without .omut/ (hidden and ignore: aside)`},
-	{"shape", "error", `a missing field or section, a wrong status, a repeated Dn, a broken link`},
+	{"shape", "error", `a missing field or section, a wrong status, a repeated Dn, a broken link; an invalid or unreadable plan pointer`},
 	{"scaffold", "error", `the pack root lacks a tool or meta file; zero fixes it`},
 	{"local-in-git", "error", `git tracks files of .omut/local/`},
-	{"size", "warn", `brief over 60 lines / 6000 Unicode characters, a thread over 80 / 8000; log over 50 entries`},
+	{"size", "warn", `brief over 60 lines / 6000 Unicode characters, a thread or selected plan over 80 / 8000; log over 50 entries`},
 	{"stale-brief", "warn", `the project changed after the brief's "updated"`},
 	{"unverified", "warn", `an active project's "verified" is empty or over 30 days old`},
 	{"unseen", "warn", `in an active project, a claim with how: not seen for 30 days`},
