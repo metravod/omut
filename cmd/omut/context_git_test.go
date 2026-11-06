@@ -146,14 +146,19 @@ func TestContextGitHeadStatesAndFailure(t *testing.T) {
 
 func TestContextGitMergeConflict(t *testing.T) {
 	repo := gitContextProject(t)
+	// CI has no personal Git identity. Require an explicit one so this
+	// fixture cannot accidentally depend on the developer's global config.
+	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "empty-global-config"))
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	git(t, repo, "config", "user.useConfigOnly", "true")
 	git(t, repo, "checkout", "-qb", "other")
 	write(t, filepath.Join(repo, "README.md"), "other\n")
 	git(t, repo, "commit", "-qam", "other")
 	git(t, repo, "checkout", "-q", "main")
 	write(t, filepath.Join(repo, "README.md"), "main\n")
 	git(t, repo, "commit", "-qam", "main")
-	if out, err := exec.Command("git", "-C", repo, "-c", "commit.gpgsign=false", "merge", "--no-edit", "other").CombinedOutput(); err == nil {
-		t.Fatalf("expected a merge conflict: %s", out)
+	if out, err := exec.Command("git", "-C", repo, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "merge", "--no-edit", "other").CombinedOutput(); err == nil || !exists(filepath.Join(repo, ".git/MERGE_HEAD")) {
+		t.Fatalf("merge did not create the conflict fixture: %v\n%s", err, out)
 	}
 	r, _, err := contextReport(t, repo)
 	g := r.Projects[0].Git
