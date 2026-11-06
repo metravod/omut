@@ -1,0 +1,1161 @@
+{
+  "schema": "omut-handoff-pilot-results-v1",
+  "reported_date": "2026-11-06",
+  "kind": "exploratory controlled smoke; not confirmatory",
+  "selection": "Original orderly block; both complete robustness blocks repeated with external test scratch directories. All initial robustness cells retained separately.",
+  "amendments": [
+    "Scorer admitted relevant regression tests uniformly; original scores retained.",
+    "External per-phase TMPDIR supplied; both robustness blocks repeated in full."
+  ],
+  "limitations": [
+    "One source tree; two scenarios share the same repair.",
+    "One pair per condition/scenario in the balanced summary.",
+    "Source reviews existing implementation rather than implementing the feature.",
+    "Native memory and hooks disabled; none is a lower bound.",
+    "Host reads constrained by instructions rather than a container.",
+    "Robustness repeats overlapped on one host; all timing and efficiency comparisons are exploratory.",
+    "No blinded semantic evaluation or general quality-gain claim."
+  ],
+  "completed_sessions_including_supplementary": 29,
+  "provenance": [
+    {
+      "label": "orderly",
+      "environment_revision": 1,
+      "scored_manifest_sha256": "3bf5a1723c9282d3205247852e0d1e98e0aa0c934191bbd9ea5dc00e940d58ef",
+      "original_manifest_sha256": "15256d63f097276525ab2c96f0d95eb43cdd1f0030ce5aa2850159b7b4cb9a62",
+      "scorer_runner_sha256": "8d07dbc33d2ab4ecbc6e21a6e85ab87375f14737763e98c03c23124ff839f58b",
+      "original_runner_sha256": "e73cd9a327fc18c3e5dd9222c6aee742ee757418481e6677694c0ad78b1062de",
+      "started_utc": "2026-11-05T19:30:30Z",
+      "model": "gpt-6.1-sol",
+      "reasoning": "high",
+      "codex_version": "codex-cli 0.166.0",
+      "source_commit": "52c4601ea573c021545491b57155eaaa433d2fd7",
+      "timeout_ns": 240000000000,
+      "seed": 20261105
+    },
+    {
+      "label": "initial-robustness",
+      "environment_revision": 1,
+      "scored_manifest_sha256": "a83b798ee20858ad52b6945f60143680041af0cf907ebe2012d511f47d2bf054",
+      "original_manifest_sha256": "5cf331b2fa8aab82327e878e533c1531b0746f1f75e4015e4cccc45521a56787",
+      "scorer_runner_sha256": "1967bd53c48f84a4afa553ab8c4983175c3f45424bc4ee8a65ea62c918fd24c0",
+      "original_runner_sha256": "e73cd9a327fc18c3e5dd9222c6aee742ee757418481e6677694c0ad78b1062de",
+      "started_utc": "2026-11-05T19:43:44Z",
+      "model": "gpt-6.1-sol",
+      "reasoning": "high",
+      "codex_version": "codex-cli 0.166.0",
+      "source_commit": "52c4601ea573c021545491b57155eaaa433d2fd7",
+      "timeout_ns": 240000000000,
+      "seed": 20261105
+    },
+    {
+      "label": "stale-repeat",
+      "environment_revision": 2,
+      "scored_manifest_sha256": "46dbaa3b796f3da2dec2e30be05a359a4024f82de4aac84ec9e0eae6daf5cfa8",
+      "original_manifest_sha256": "46dbaa3b796f3da2dec2e30be05a359a4024f82de4aac84ec9e0eae6daf5cfa8",
+      "scorer_runner_sha256": "1967bd53c48f84a4afa553ab8c4983175c3f45424bc4ee8a65ea62c918fd24c0",
+      "original_runner_sha256": "1967bd53c48f84a4afa553ab8c4983175c3f45424bc4ee8a65ea62c918fd24c0",
+      "started_utc": "2026-11-06T04:45:22Z",
+      "model": "gpt-6.1-sol",
+      "reasoning": "high",
+      "codex_version": "codex-cli 0.166.0",
+      "source_commit": "52c4601ea573c021545491b57155eaaa433d2fd7",
+      "timeout_ns": 240000000000,
+      "seed": 20261105
+    },
+    {
+      "label": "irrelevant-repeat",
+      "environment_revision": 2,
+      "scored_manifest_sha256": "4e70df84a35846a5614484a1a5fc2a3707f7067ac4949c907dfc5959cf310cb6",
+      "original_manifest_sha256": "4e70df84a35846a5614484a1a5fc2a3707f7067ac4949c907dfc5959cf310cb6",
+      "scorer_runner_sha256": "1967bd53c48f84a4afa553ab8c4983175c3f45424bc4ee8a65ea62c918fd24c0",
+      "original_runner_sha256": "1967bd53c48f84a4afa553ab8c4983175c3f45424bc4ee8a65ea62c918fd24c0",
+      "started_utc": "2026-11-06T04:49:01Z",
+      "model": "gpt-6.1-sol",
+      "reasoning": "high",
+      "codex_version": "codex-cli 0.166.0",
+      "source_commit": "52c4601ea573c021545491b57155eaaa433d2fd7",
+      "timeout_ns": 240000000000,
+      "seed": 20261105
+    }
+  ],
+  "primary_cells": [
+    {
+      "Scenario": "orderly-crlf",
+      "Condition": "note",
+      "Repeat": 1,
+      "Status": "scored",
+      "Success": true,
+      "MemoryBytes": 3754,
+      "TotalUsage": {
+        "input_tokens": 866351,
+        "cached_input_tokens": 792192,
+        "output_tokens": 5635,
+        "reasoning_output_tokens": 919
+      },
+      "AgentSeconds": 216.51476825100002,
+      "id": "orderly/cell-001",
+      "original_success": true,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        },
+        {
+          "name": "receiver scope",
+          "passed": true
+        },
+        {
+          "name": "vet",
+          "passed": true
+        },
+        {
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "name": "hidden policy",
+          "passed": true
+        },
+        {
+          "name": "CRLF mutation killed",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 130.744108917,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 587667,
+          "cached_input_tokens": 535936,
+          "output_tokens": 3335,
+          "reasoning_output_tokens": 654
+        },
+        "commands": 18
+      },
+      "Receiver": {
+        "exit_code": 0,
+        "seconds": 85.770659334,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 278684,
+          "cached_input_tokens": 256256,
+          "output_tokens": 2300,
+          "reasoning_output_tokens": 265
+        },
+        "commands": 12
+      }
+    },
+    {
+      "Scenario": "orderly-crlf",
+      "Condition": "none",
+      "Repeat": 1,
+      "Status": "scored",
+      "Success": false,
+      "MemoryBytes": 0,
+      "TotalUsage": {
+        "input_tokens": 689420,
+        "cached_input_tokens": 608128,
+        "output_tokens": 3138,
+        "reasoning_output_tokens": 955
+      },
+      "AgentSeconds": 155.679445667,
+      "id": "orderly/cell-002",
+      "original_success": false,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        },
+        {
+          "name": "receiver scope",
+          "passed": true
+        },
+        {
+          "name": "vet",
+          "passed": true
+        },
+        {
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "name": "hidden policy",
+          "passed": true
+        },
+        {
+          "name": "CRLF mutation killed",
+          "passed": false
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 100.126876167,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 445645,
+          "cached_input_tokens": 416640,
+          "output_tokens": 2076,
+          "reasoning_output_tokens": 629
+        },
+        "commands": 17
+      },
+      "Receiver": {
+        "exit_code": 0,
+        "seconds": 55.5525695,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 243775,
+          "cached_input_tokens": 191488,
+          "output_tokens": 1062,
+          "reasoning_output_tokens": 326
+        },
+        "commands": 11
+      }
+    },
+    {
+      "Scenario": "orderly-crlf",
+      "Condition": "omut",
+      "Repeat": 1,
+      "Status": "scored",
+      "Success": true,
+      "MemoryBytes": 20540,
+      "TotalUsage": {
+        "input_tokens": 644042,
+        "cached_input_tokens": 581248,
+        "output_tokens": 7268,
+        "reasoning_output_tokens": 1320
+      },
+      "AgentSeconds": 233.19845791699998,
+      "id": "orderly/cell-003",
+      "original_success": true,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        },
+        {
+          "name": "receiver scope",
+          "passed": true
+        },
+        {
+          "name": "vet",
+          "passed": true
+        },
+        {
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "name": "hidden policy",
+          "passed": true
+        },
+        {
+          "name": "CRLF mutation killed",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 113.623454583,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 300353,
+          "cached_input_tokens": 265728,
+          "output_tokens": 3476,
+          "reasoning_output_tokens": 831
+        },
+        "commands": 9
+      },
+      "Receiver": {
+        "exit_code": 0,
+        "seconds": 119.575003334,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 343689,
+          "cached_input_tokens": 315520,
+          "output_tokens": 3792,
+          "reasoning_output_tokens": 489
+        },
+        "commands": 16
+      }
+    },
+    {
+      "Scenario": "stale-thread",
+      "Condition": "note",
+      "Repeat": 1,
+      "Status": "scored",
+      "Success": true,
+      "MemoryBytes": 1566,
+      "TotalUsage": {
+        "input_tokens": 553485,
+        "cached_input_tokens": 479872,
+        "output_tokens": 3375,
+        "reasoning_output_tokens": 394
+      },
+      "AgentSeconds": 147.4731865,
+      "id": "stale-repeat/cell-001",
+      "original_success": true,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        },
+        {
+          "name": "receiver scope",
+          "passed": true
+        },
+        {
+          "name": "vet",
+          "passed": true
+        },
+        {
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "name": "hidden policy",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 68.865019375,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 270408,
+          "cached_input_tokens": 219776,
+          "output_tokens": 1582,
+          "reasoning_output_tokens": 157
+        },
+        "commands": 15
+      },
+      "Receiver": {
+        "exit_code": 0,
+        "seconds": 78.608167125,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 283077,
+          "cached_input_tokens": 260096,
+          "output_tokens": 1793,
+          "reasoning_output_tokens": 237
+        },
+        "commands": 14
+      }
+    },
+    {
+      "Scenario": "stale-thread",
+      "Condition": "none",
+      "Repeat": 1,
+      "Status": "scored",
+      "Success": true,
+      "MemoryBytes": 0,
+      "TotalUsage": {
+        "input_tokens": 533438,
+        "cached_input_tokens": 461184,
+        "output_tokens": 2230,
+        "reasoning_output_tokens": 228
+      },
+      "AgentSeconds": 114.699799166,
+      "id": "stale-repeat/cell-002",
+      "original_success": true,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        },
+        {
+          "name": "receiver scope",
+          "passed": true
+        },
+        {
+          "name": "vet",
+          "passed": true
+        },
+        {
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "name": "hidden policy",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 55.926243208,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 247318,
+          "cached_input_tokens": 219264,
+          "output_tokens": 1140,
+          "reasoning_output_tokens": 75
+        },
+        "commands": 9
+      },
+      "Receiver": {
+        "exit_code": 0,
+        "seconds": 58.773555958,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 286120,
+          "cached_input_tokens": 241920,
+          "output_tokens": 1090,
+          "reasoning_output_tokens": 153
+        },
+        "commands": 10
+      }
+    },
+    {
+      "Scenario": "stale-thread",
+      "Condition": "omut",
+      "Repeat": 1,
+      "Status": "scored",
+      "Success": true,
+      "MemoryBytes": 18555,
+      "TotalUsage": {
+        "input_tokens": 576028,
+        "cached_input_tokens": 508672,
+        "output_tokens": 5287,
+        "reasoning_output_tokens": 736
+      },
+      "AgentSeconds": 180.756763375,
+      "id": "stale-repeat/cell-003",
+      "original_success": true,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        },
+        {
+          "name": "receiver scope",
+          "passed": true
+        },
+        {
+          "name": "vet",
+          "passed": true
+        },
+        {
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "name": "hidden policy",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 91.02433225,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 284553,
+          "cached_input_tokens": 251008,
+          "output_tokens": 2685,
+          "reasoning_output_tokens": 490
+        },
+        "commands": 11
+      },
+      "Receiver": {
+        "exit_code": 0,
+        "seconds": 89.732431125,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 291475,
+          "cached_input_tokens": 257664,
+          "output_tokens": 2602,
+          "reasoning_output_tokens": 246
+        },
+        "commands": 11
+      }
+    },
+    {
+      "Scenario": "irrelevant-history",
+      "Condition": "note",
+      "Repeat": 1,
+      "Status": "scored",
+      "Success": true,
+      "MemoryBytes": 2241,
+      "TotalUsage": {
+        "input_tokens": 664978,
+        "cached_input_tokens": 580480,
+        "output_tokens": 4515,
+        "reasoning_output_tokens": 845
+      },
+      "AgentSeconds": 167.058089291,
+      "id": "irrelevant-repeat/cell-001",
+      "original_success": true,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        },
+        {
+          "name": "receiver scope",
+          "passed": true
+        },
+        {
+          "name": "vet",
+          "passed": true
+        },
+        {
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "name": "hidden policy",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 74.562339416,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 275932,
+          "cached_input_tokens": 241280,
+          "output_tokens": 1916,
+          "reasoning_output_tokens": 242
+        },
+        "commands": 10
+      },
+      "Receiver": {
+        "exit_code": 0,
+        "seconds": 92.495749875,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 389046,
+          "cached_input_tokens": 339200,
+          "output_tokens": 2599,
+          "reasoning_output_tokens": 603
+        },
+        "commands": 10
+      }
+    },
+    {
+      "Scenario": "irrelevant-history",
+      "Condition": "none",
+      "Repeat": 1,
+      "Status": "scored",
+      "Success": true,
+      "MemoryBytes": 0,
+      "TotalUsage": {
+        "input_tokens": 498859,
+        "cached_input_tokens": 446976,
+        "output_tokens": 2344,
+        "reasoning_output_tokens": 402
+      },
+      "AgentSeconds": 111.555521958,
+      "id": "irrelevant-repeat/cell-002",
+      "original_success": true,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        },
+        {
+          "name": "receiver scope",
+          "passed": true
+        },
+        {
+          "name": "vet",
+          "passed": true
+        },
+        {
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "name": "hidden policy",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 45.604660833,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 177067,
+          "cached_input_tokens": 153856,
+          "output_tokens": 836,
+          "reasoning_output_tokens": 107
+        },
+        "commands": 9
+      },
+      "Receiver": {
+        "exit_code": 0,
+        "seconds": 65.950861125,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 321792,
+          "cached_input_tokens": 293120,
+          "output_tokens": 1508,
+          "reasoning_output_tokens": 295
+        },
+        "commands": 11
+      }
+    },
+    {
+      "Scenario": "irrelevant-history",
+      "Condition": "omut",
+      "Repeat": 1,
+      "Status": "scored",
+      "Success": true,
+      "MemoryBytes": 18514,
+      "TotalUsage": {
+        "input_tokens": 625000,
+        "cached_input_tokens": 551296,
+        "output_tokens": 5959,
+        "reasoning_output_tokens": 1074
+      },
+      "AgentSeconds": 190.007562,
+      "id": "irrelevant-repeat/cell-003",
+      "original_success": true,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        },
+        {
+          "name": "receiver scope",
+          "passed": true
+        },
+        {
+          "name": "vet",
+          "passed": true
+        },
+        {
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "name": "hidden policy",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 74.119080875,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 265849,
+          "cached_input_tokens": 235520,
+          "output_tokens": 2283,
+          "reasoning_output_tokens": 479
+        },
+        "commands": 10
+      },
+      "Receiver": {
+        "exit_code": 0,
+        "seconds": 115.888481125,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 359151,
+          "cached_input_tokens": 315776,
+          "output_tokens": 3676,
+          "reasoning_output_tokens": 595
+        },
+        "commands": 13
+      }
+    }
+  ],
+  "supplementary_cells": [
+    {
+      "Scenario": "stale-thread",
+      "Condition": "none",
+      "Repeat": 1,
+      "Status": "scored",
+      "Success": true,
+      "MemoryBytes": 0,
+      "TotalUsage": {
+        "input_tokens": 635038,
+        "cached_input_tokens": 553344,
+        "output_tokens": 2768,
+        "reasoning_output_tokens": 341
+      },
+      "AgentSeconds": 132.767391084,
+      "id": "initial-robustness/cell-001",
+      "original_success": true,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        },
+        {
+          "name": "receiver scope",
+          "passed": true
+        },
+        {
+          "name": "vet",
+          "passed": true
+        },
+        {
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "name": "hidden policy",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 54.881814125,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 173823,
+          "cached_input_tokens": 149888,
+          "output_tokens": 1073,
+          "reasoning_output_tokens": 138
+        },
+        "commands": 9
+      },
+      "Receiver": {
+        "exit_code": 0,
+        "seconds": 77.885576959,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 461215,
+          "cached_input_tokens": 403456,
+          "output_tokens": 1695,
+          "reasoning_output_tokens": 203
+        },
+        "commands": 21
+      }
+    },
+    {
+      "Scenario": "irrelevant-history",
+      "Condition": "none",
+      "Repeat": 1,
+      "Status": "scored",
+      "Success": true,
+      "MemoryBytes": 0,
+      "TotalUsage": {
+        "input_tokens": 697585,
+        "cached_input_tokens": 637184,
+        "output_tokens": 4158,
+        "reasoning_output_tokens": 1317
+      },
+      "AgentSeconds": 175.07156808300002,
+      "id": "initial-robustness/cell-002",
+      "original_success": false,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        },
+        {
+          "name": "receiver scope",
+          "passed": true
+        },
+        {
+          "name": "vet",
+          "passed": true
+        },
+        {
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "name": "hidden policy",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 46.320064916,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 165466,
+          "cached_input_tokens": 135424,
+          "output_tokens": 1054,
+          "reasoning_output_tokens": 242
+        },
+        "commands": 7
+      },
+      "Receiver": {
+        "exit_code": 0,
+        "seconds": 128.751503167,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 532119,
+          "cached_input_tokens": 501760,
+          "output_tokens": 3104,
+          "reasoning_output_tokens": 1075
+        },
+        "commands": 15
+      }
+    },
+    {
+      "Scenario": "irrelevant-history",
+      "Condition": "omut",
+      "Repeat": 1,
+      "Status": "scored",
+      "Success": false,
+      "MemoryBytes": 18927,
+      "TotalUsage": {
+        "input_tokens": 1154221,
+        "cached_input_tokens": 1062144,
+        "output_tokens": 8420,
+        "reasoning_output_tokens": 2439
+      },
+      "AgentSeconds": 295.202168375,
+      "id": "initial-robustness/cell-003",
+      "original_success": false,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        },
+        {
+          "name": "receiver scope",
+          "passed": false
+        },
+        {
+          "name": "vet",
+          "passed": true
+        },
+        {
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "name": "hidden policy",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 94.707267708,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 264520,
+          "cached_input_tokens": 231168,
+          "output_tokens": 2933,
+          "reasoning_output_tokens": 816
+        },
+        "commands": 11
+      },
+      "Receiver": {
+        "exit_code": 0,
+        "seconds": 200.494900667,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 889701,
+          "cached_input_tokens": 830976,
+          "output_tokens": 5487,
+          "reasoning_output_tokens": 1623
+        },
+        "commands": 17
+      }
+    },
+    {
+      "Scenario": "stale-thread",
+      "Condition": "note",
+      "Repeat": 1,
+      "Status": "scored",
+      "Success": true,
+      "MemoryBytes": 1972,
+      "TotalUsage": {
+        "input_tokens": 786121,
+        "cached_input_tokens": 704128,
+        "output_tokens": 4535,
+        "reasoning_output_tokens": 799
+      },
+      "AgentSeconds": 170.342652375,
+      "id": "initial-robustness/cell-004",
+      "original_success": true,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        },
+        {
+          "name": "receiver scope",
+          "passed": true
+        },
+        {
+          "name": "vet",
+          "passed": true
+        },
+        {
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "name": "hidden policy",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 71.124641667,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 252926,
+          "cached_input_tokens": 213248,
+          "output_tokens": 1928,
+          "reasoning_output_tokens": 242
+        },
+        "commands": 10
+      },
+      "Receiver": {
+        "exit_code": 0,
+        "seconds": 99.218010708,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 533195,
+          "cached_input_tokens": 490880,
+          "output_tokens": 2607,
+          "reasoning_output_tokens": 557
+        },
+        "commands": 15
+      }
+    },
+    {
+      "Scenario": "stale-thread",
+      "Condition": "omut",
+      "Repeat": 1,
+      "Status": "invalid-source",
+      "Success": false,
+      "MemoryBytes": 18596,
+      "TotalUsage": {
+        "input_tokens": 437211,
+        "cached_input_tokens": 368384,
+        "output_tokens": 3974,
+        "reasoning_output_tokens": 1343
+      },
+      "AgentSeconds": 152.750706041,
+      "id": "initial-robustness/cell-005",
+      "original_success": false,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": false
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 152.750706041,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 437211,
+          "cached_input_tokens": 368384,
+          "output_tokens": 3974,
+          "reasoning_output_tokens": 1343
+        },
+        "commands": 12
+      },
+      "Receiver": null
+    },
+    {
+      "Scenario": "irrelevant-history",
+      "Condition": "note",
+      "Repeat": 1,
+      "Status": "scored",
+      "Success": true,
+      "MemoryBytes": 2661,
+      "TotalUsage": {
+        "input_tokens": 820700,
+        "cached_input_tokens": 732672,
+        "output_tokens": 4941,
+        "reasoning_output_tokens": 1099
+      },
+      "AgentSeconds": 205.873789584,
+      "id": "initial-robustness/cell-006",
+      "original_success": true,
+      "checks": [
+        {
+          "name": "source scope",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        },
+        {
+          "name": "receiver scope",
+          "passed": true
+        },
+        {
+          "name": "vet",
+          "passed": true
+        },
+        {
+          "name": "tests",
+          "passed": true
+        },
+        {
+          "name": "hidden policy",
+          "passed": true
+        },
+        {
+          "name": "memory scope",
+          "passed": true
+        }
+      ],
+      "Source": {
+        "exit_code": 0,
+        "seconds": 119.914085084,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 417275,
+          "cached_input_tokens": 362112,
+          "output_tokens": 2660,
+          "reasoning_output_tokens": 642
+        },
+        "commands": 11
+      },
+      "Receiver": {
+        "exit_code": 0,
+        "seconds": 85.9597045,
+        "completed": true,
+        "timed_out": false,
+        "usage": {
+          "input_tokens": 403425,
+          "cached_input_tokens": 370560,
+          "output_tokens": 2281,
+          "reasoning_output_tokens": 457
+        },
+        "commands": 12
+      }
+    }
+  ]
+}
