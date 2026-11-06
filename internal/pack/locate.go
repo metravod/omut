@@ -15,6 +15,7 @@ type Place struct {
 	Dir      string // holds .omut/; "" when there is none
 	Instance string // holds this copy's .omut/local/
 	Worktree string // the linked worktree dir is in, when Dir is not in it
+	WorkDir  string // project directory in that worktree, when meta is elsewhere
 	Foreign  bool   // Dir is above the git work tree dir is in: not its project
 }
 
@@ -42,7 +43,7 @@ func Locate(dir string) Place {
 		if main != "" && !above && same(d, top) {
 			for m := filepath.Join(main, rel); ; m = filepath.Dir(m) {
 				if hasMeta(m) {
-					return Place{Dir: m, Instance: m, Worktree: top}
+					return Place{Dir: m, Instance: m, Worktree: top, WorkDir: filepath.Join(top, relIn(main, m))}
 				}
 				if same(m, main) {
 					break

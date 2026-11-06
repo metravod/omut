@@ -8,7 +8,7 @@ The rituals in `AGENTS.md` rest on the agent's discipline, and the end of a sess
 
 | Hook | When | What it does |
 |---|---|---|
-| `omut hook start` | an agent's session starts | Prints the context to start from: the brief, decisions waiting for the human, unfinished threads with their next step, and what `omut check` found. Warns about unrecorded work: files newer than the last write to `.omut/log.md` that no commit holds. In a pack root, it tells the agent it is the lead and includes the same deterministic overview as `omut context`, with source locations, selection policy and any read failures. |
+| `omut hook start` | an agent's session starts | Prints the context to start from: the brief, decisions waiting for the human, unfinished threads with their next step, and what `omut check` found. Warns about unrecorded work: files newer than the last write to `.omut/log.md` that no commit holds. In a pack root, it tells the agent it is the lead and includes the same deterministic overview as `omut context`, with source locations, local Git observations, selection policy and any read/Git failures. |
 | `omut hook commit` | git pre-commit | Reminds when staged work is newer than the last write to `.omut/log.md`. Blocks a commit that carries meta with shape errors. `--strict` also blocks work committed without a log entry. |
 
 `--agent claude|codex|cursor` makes `omut hook start` read the agent's JSON payload for the session's directory and answer in that agent's format. Without it, the current directory and plain text.

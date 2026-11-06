@@ -113,9 +113,11 @@ omut context hn-parser          # full current records of one project
 
 An agent started in the root is the lead: it knows the whole pack and tells you what is where. Started in a project, it keeps that project's meta.
 
-The lead's startup hook supplies the same overview as `omut context`: pack context, project status and current brief sections, waiting decisions, unfinished thread summaries and check findings. The CLI collects literal records with source paths and lines; the agent interprets them. It needs no model calls to discover and assemble the files.
+The lead's startup hook supplies the same overview as `omut context`: pack context, project status and current brief sections, waiting decisions, unfinished thread summaries, check findings and local Git observations. The CLI collects literal records with source paths and lines; the agent interprets them. It needs no model calls to discover and assemble the files.
 
-The overview omits project footprints, local memory, logs and decided project records; `omut context <project>` includes the full brief and decisions, unfinished threads, waiting ADRs, filled local memory and the latest five entries from each log. Completed threads and older history remain in their source files. Read failures and shape errors mark the output incomplete and return exit 1; warnings remain visible with exit 0. `--json` exposes the same selection for other tools. This reduces file-discovery calls; token savings depend on how much context is selected.
+Git observations include the branch/upstream, ahead/behind from local refs, changed/staged/untracked paths, renames and conflicts. The lead can use this for an ordinary overview and open a specific diff when it matters. Changes are scoped to the project; branch/divergence describe its repository. No fetch or full diff is included. Private worktrees show the working copy's status while keeping meta in the main checkout. Projects without a Git working tree say so; Git failures are explicit and mark the output incomplete. Git status reads disable optional index refresh and fsmonitor hooks.
+
+The overview omits project footprints, local memory, logs and decided project records; `omut context <project>` includes the full brief and decisions, unfinished threads, waiting ADRs, filled local memory and the latest five entries from each log. Completed threads and older history remain in their source files. Read/Git failures and shape errors mark the output incomplete and return exit 1; warnings remain visible with exit 0. `--json` exposes the same selection for other tools. This reduces file-discovery calls; token savings depend on how much context is selected.
 
 | Command | What it does |
 |---|---|

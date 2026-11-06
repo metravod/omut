@@ -32,7 +32,7 @@ Commands:
   start [project] [--private]    give a project its meta, or adopt a directory
   check [project] [--json] [--fail-on warn]
                                  report on the shape and freshness of the meta
-  context [project] [--json]      assemble recorded state with source locations
+  context [project] [--json]      assemble meta and observe local Git state
   zero [project]                 repair the scaffold, update the tool files
   freeze [project]               status: frozen
   thaw [project]                 status: active
@@ -158,9 +158,9 @@ Exit code: 0 no findings at the failing level; 1 errors, or warnings too with
 
 	"context": `omut context [project] [--json]
 
-Assembles recorded state without a model, network, cache or writes. Text is
-copied from the meta with source paths and 1-based lines; only line endings are
-normalized. No claim is verified and no text is shortened to fit a budget.
+Assembles recorded meta and observes local Git state without a model, network,
+cache or writes. Meta text has source paths and 1-based lines; only line endings
+are normalized. This does not verify the recorded claims or shorten their text.
 
 Scope (like check):
   at a pack root          overview of the pack and all its projects
@@ -174,12 +174,26 @@ Pack overview:
   open/doubted decision lines and waiting ADR titles/statuses
   unfinished thread titles, Goal, Open and Next step, with status and owner
   check findings, including stale briefs and stalled threads
-  frozen projects: brief sections only, with no pending work listed
+  frozen projects: brief sections and Git observations, with no pending records
 
 Project records:
   full brief and decisions, active/parked threads and waiting ADR bodies
   filled local instance memory; the latest five entries from each log
   check findings; private and main-checkout/worktree locations when applicable
+
+Git observations (for the pack root and every project, including frozen ones):
+  branch or detached/unborn HEAD, upstream, ahead/behind from local refs
+  changed/staged/untracked paths with XY index/worktree status, rename sources,
+  submodule state and conflict count; no full diffs, ignored files or fetch
+  paths relative to the Git repository; changes scoped to the project directory
+  branch/divergence describe the repository; clean describes that project scope
+  private worktrees: observe the working copy while reading main-checkout meta
+  no working tree: say so; failed Git reads: explicit unavailable state, never
+  reported as clean. Status reads disable optional index refresh and fsmonitor.
+
+Git failures make the report incomplete. Unknown clean/ahead/behind are null in
+JSON. A missing upstream ref leaves divergence unknown. Git is optional for
+projects without a working tree; repositories need Git with porcelain v2.
 
 Pack overview omits project footprints, local memory, logs and decided project
 records. Use context <project> for its current records. Completed/dropped
@@ -190,10 +204,13 @@ Invalid selected records and read failures are reported, not silently skipped.
 pack (when applicable), projects, findings, problems and incomplete. Each
 project has metadata and sources with kind, file, line and literal text; thread
 sources also carry status, updated, by and parked_because. Source and finding
-paths are relative to root. Arrays are empty rather than null. Project and file
-order is stable; freshness findings depend on the date and filesystem/git state.
+paths are relative to root. Each project and the pack also have a git object
+with state, directory, repository root, head/branch, upstream, ahead/behind,
+clean, conflicts and changes (status/path, optional original_path/submodule).
+Arrays are empty rather than null. Ordering is stable; observations depend on
+the filesystem/git state, and freshness findings also depend on the date.
 
-Exit code: 0 assembled (warnings are included); 1 incomplete because of read or
+Exit code: 0 assembled (warnings included); 1 incomplete because of read, Git or
 shape errors, or no meta. Partial output remains available, including in JSON.
 `,
 	"zero": `omut zero [project] [--by agent/model]
@@ -316,7 +333,7 @@ meta in the main checkout and gives the agent the full path.
            found, claims due for checking, and work newer than the log that no
            commit holds. In a pack root: tells the agent it is the lead and
            includes the same assembled overview as omut context, with sources,
-           findings and any incomplete-context notice.
+           local Git observations, findings and incomplete-context notices.
   commit   as git's pre-commit: reminds on stderr when staged work is newer than
            .omut/log.md; blocks a commit carrying meta with shape errors.
 

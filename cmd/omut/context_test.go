@@ -310,6 +310,9 @@ func TestContextWorktreeLayers(t *testing.T) {
 				t.Fatalf("worktree context: %+v, %v", r, err)
 			}
 			p := r.Projects[0]
+			if p.Git == nil || p.Git.State != "available" || p.Git.Directory != wt || p.Git.Root != wt {
+				t.Errorf("Git observation did not come from the actual worktree: %+v", p.Git)
+			}
 			if p.Private != private || !strings.Contains(out, "MAIN-CHECKOUT-ONLY") || p.Instance != repo {
 				t.Errorf("lost main-checkout memory or visibility: %+v", p)
 			}

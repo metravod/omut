@@ -14,19 +14,19 @@ import (
 // and what a repository that lists .omut/ in its .gitignore gets as well.
 // Outside git there is nothing to share, so nothing is private.
 func Private(dir string) bool {
-	if exec.Command("git", "-C", dir, "rev-parse", "--is-inside-work-tree").Run() != nil {
+	if exec.Command("git", "--no-optional-locks", "-c", "core.fsmonitor=false", "-C", dir, "rev-parse", "--is-inside-work-tree").Run() != nil {
 		return false
 	}
 	if MetaTracked(dir) {
 		return false
 	}
-	return exec.Command("git", "-C", dir, "check-ignore", "-q", MetaDir+"/"+Brief).Run() == nil
+	return exec.Command("git", "--no-optional-locks", "-c", "core.fsmonitor=false", "-C", dir, "check-ignore", "-q", MetaDir+"/"+Brief).Run() == nil
 }
 
 // MetaTracked reports whether git tracks anything in dir's .omut/: committed,
 // or staged for a commit.
 func MetaTracked(dir string) bool {
-	out, _ := exec.Command("git", "-C", dir, "ls-files", "--", MetaDir).Output()
+	out, _ := exec.Command("git", "--no-optional-locks", "-c", "core.fsmonitor=false", "-C", dir, "ls-files", "--", MetaDir).Output()
 	return len(out) > 0
 }
 
@@ -34,7 +34,7 @@ func MetaTracked(dir string) bool {
 func GitSees(dir string, files ...string) []string {
 	var seen []string
 	for _, f := range files {
-		if out, _ := exec.Command("git", "-C", dir, "status", "--porcelain", "--", f).Output(); len(out) > 0 {
+		if out, _ := exec.Command("git", "--no-optional-locks", "-c", "core.fsmonitor=false", "-C", dir, "status", "--porcelain", "--", f).Output(); len(out) > 0 {
 			seen = append(seen, f)
 		}
 	}

@@ -28,9 +28,9 @@ func checkInstance(r *report, dir string, opt Options, active bool) {
 	}
 	rel := pack.MetaDir + "/" + pack.Local
 	if isRepo(dir) {
-		if out, _ := exec.Command("git", "-C", dir, "ls-files", "--", rel).Output(); len(out) > 0 {
+		if out, _ := exec.Command("git", "--no-optional-locks", "-c", "core.fsmonitor=false", "-C", dir, "ls-files", "--", rel).Output(); len(out) > 0 {
 			r.add("local-in-git", Error, local, 0, "the instance layer is in git, so every clone gets this copy's facts: git rm -r --cached %s", rel)
-		} else if exec.Command("git", "-C", dir, "check-ignore", "-q", rel+"/"+pack.Instance).Run() != nil {
+		} else if exec.Command("git", "--no-optional-locks", "-c", "core.fsmonitor=false", "-C", dir, "check-ignore", "-q", rel+"/"+pack.Instance).Run() != nil {
 			r.add("local-not-ignored", Warn, local, 0, "git does not ignore %s, the next git add -A takes it: omut zero writes .omut/.gitignore", rel)
 		}
 	}

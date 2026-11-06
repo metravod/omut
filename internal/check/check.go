@@ -338,7 +338,7 @@ func lastCommit(dir string) time.Time {
 // dirtyChange is the newest mtime among the files git reports as changed
 // or untracked, .omut/ aside. ok is false when git can't answer.
 func dirtyChange(dir string) (when time.Time, what string, ok bool) {
-	out, err := exec.Command("git", "-C", dir, "status", "--porcelain", "-z", "--untracked-files=all").Output()
+	out, err := exec.Command("git", "--no-optional-locks", "-c", "core.fsmonitor=false", "-C", dir, "status", "--porcelain", "-z", "--untracked-files=all").Output()
 	if err != nil {
 		return when, what, false
 	}

@@ -16,8 +16,8 @@ import (
 	"github.com/metravod/omut/internal/pack"
 )
 
-const packSelection = "Pack brief and decisions; each project's Why, What it is, Now and Next; open/doubted decisions and waiting ADR titles; unfinished thread titles, Goal, Open and Next step. Frozen projects: brief only. Project footprints, local memory, logs, completed threads and decided project records are omitted; use omut context <project> for current project records."
-const projectSelection = "Full brief and decisions; full active/parked threads and waiting ADRs; filled local instance memory and the latest five entries of each log. Completed/dropped threads, decided ADR bodies and older history are omitted. Invalid selected records and read failures are reported."
+const packSelection = "Pack brief and decisions; each project's Why, What it is, Now and Next; open/doubted decisions and waiting ADR titles; unfinished thread titles, Goal, Open and Next step. Frozen projects: brief and Git observation only. Project footprints, local memory, logs, completed threads and decided project records are omitted; use omut context <project> for current project records. Git observations include branch/upstream, local ahead/behind and changed paths, with no fetch or full diffs."
+const projectSelection = "Full brief and decisions; full active/parked threads and waiting ADRs; filled local instance memory and the latest five entries of each log. Completed/dropped threads, decided ADR bodies and older history are omitted. Invalid selected records and read failures are reported. Git observations include branch/upstream, local ahead/behind and changed paths, with no fetch or full diffs."
 
 // Source is a literal excerpt. Line is 1-based; only line endings are
 // normalized. File is relative to Report.Root, possibly outside it for local
@@ -35,15 +35,16 @@ type Source struct {
 }
 
 type Project struct {
-	Name     string   `json:"name"`
-	Dir      string   `json:"dir"`
-	Instance string   `json:"instance_dir"`
-	Worktree string   `json:"worktree,omitempty"`
-	Private  bool     `json:"private"`
-	Status   string   `json:"status"`
-	Updated  string   `json:"updated"`
-	Verified string   `json:"verified"`
-	Sources  []Source `json:"sources"`
+	Name     string    `json:"name"`
+	Dir      string    `json:"dir"`
+	Instance string    `json:"instance_dir"`
+	Worktree string    `json:"worktree,omitempty"`
+	Private  bool      `json:"private"`
+	Status   string    `json:"status"`
+	Updated  string    `json:"updated"`
+	Verified string    `json:"verified"`
+	Sources  []Source  `json:"sources"`
+	Git      *GitState `json:"git"`
 }
 
 type Problem struct {
@@ -80,6 +81,7 @@ func ForPack(p *pack.Pack, opt check.Options) *Report {
 	r := newReport("pack", p.Root, packSelection, opt)
 	p = &pack.Pack{Root: r.Root}
 	r.Pack = &Project{Name: filepath.Base(r.Root), Dir: r.Root, Instance: r.Root, Sources: []Source{}}
+	r.Pack.Git = r.git(r.Root)
 	if d := r.read(p.Lead(pack.Brief), false); d != nil {
 		r.Pack.Status, r.Pack.Updated, r.Pack.Verified = d.Front["status"], d.Front["updated"], d.Front["verified"]
 		r.Pack.Sources = append(r.Pack.Sources, r.source("brief", d, 0, len(d.Lines)))
@@ -117,6 +119,9 @@ func ForProject(pl pack.Place, opt check.Options) *Report {
 	pl.Dir, pl.Instance = resolved(pl.Dir), resolved(pl.Instance)
 	if pl.Worktree != "" {
 		pl.Worktree = resolved(pl.Worktree)
+	}
+	if pl.WorkDir != "" {
+		pl.WorkDir = resolved(pl.WorkDir)
 	}
 	r := newReport("project", pl.Dir, projectSelection, opt)
 	r.Projects = append(r.Projects, r.project(name, pl, false))
@@ -184,6 +189,11 @@ func (r *Report) source(kind string, d *meta.Doc, start, end int) Source {
 func (r *Report) project(name string, pl pack.Place, overview bool) Project {
 	p := Project{Name: name, Dir: pl.Dir, Instance: pl.Instance, Worktree: pl.Worktree,
 		Private: pack.Private(pl.Dir), Sources: []Source{}}
+	work := pl.Dir
+	if pl.WorkDir != "" {
+		work = pl.WorkDir
+	}
+	p.Git = r.git(work)
 	lead := filepath.Join(pl.Dir, pack.MetaDir)
 	brief := r.read(filepath.Join(lead, pack.Brief), false)
 	if brief != nil {
@@ -351,7 +361,7 @@ func (r *Report) log(p *Project, path string, optional bool) {
 // Markdown is the same selection as JSON, with explicit source locations.
 func (r *Report) Markdown() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# omut context: %s\n\nRoot: `%s` · as of %s\n\nSelection: %s\n\nThis is recorded state, not a verification of its truth. Paths below are relative to Root.\n", r.Scope, r.Root, r.AsOf, r.Selection)
+	fmt.Fprintf(&b, "# omut context: %s\n\nRoot: `%s` · as of %s\n\nSelection: %s\n\nMeta excerpts are recorded state, not a verification of their truth. Their paths are relative to Root. Git observations are current local reads; divergence uses cached local refs, not a server check. Full diffs are omitted.\n", r.Scope, r.Root, r.AsOf, r.Selection)
 	writeProject := func(p Project, isPack bool) {
 		fmt.Fprintf(&b, "\n## %s\n\nDirectory: `%s`\n", p.Name, p.Dir)
 		if isPack {
@@ -367,6 +377,9 @@ func (r *Report) Markdown() string {
 		}
 		if p.Instance != p.Dir {
 			fmt.Fprintf(&b, "This copy's memory: `%s` (main checkout).\n", filepath.Join(p.Instance, pack.MetaDir, pack.Local))
+		}
+		if p.Git != nil {
+			b.WriteString(p.Git.markdown())
 		}
 		for _, s := range p.Sources {
 			fmt.Fprintf(&b, "\n### %s — `%s:%d`", s.Kind, s.File, s.Line)
@@ -400,7 +413,7 @@ func (r *Report) Markdown() string {
 		fmt.Fprintf(&b, "- %s %s: %s (`%s:%d`)\n", f.Level, f.Rule, f.Message, f.File, f.Line)
 	}
 	if r.Incomplete {
-		b.WriteString("\n## Incomplete context\n\nRead failures or shape errors require attention; missing data does not mean nothing is pending.\n")
+		b.WriteString("\n## Incomplete context\n\nRead/Git failures or shape errors require attention; missing data does not mean nothing is pending.\n")
 	}
 	for _, p := range r.Problems {
 		fmt.Fprintf(&b, "- `%s`: %s\n", p.File, p.Message)
