@@ -20,7 +20,8 @@ const usage = `omut: project memory that any agent can read, keep and check.
 
 Plain markdown in .omut/ next to the code says why a project exists, what was
 decided, what is unfinished and where it runs. Agents write it as they work;
-this CLI only lays down templates and checks their shape and freshness.
+this CLI lays down templates, checks their shape and freshness, and assembles
+recorded context without interpreting it.
 
 Start here:
   omut start             in your repository: .omut/ and a block in AGENTS.md
@@ -31,6 +32,7 @@ Commands:
   start [project] [--private]    give a project its meta, or adopt a directory
   check [project] [--json] [--fail-on warn]
                                  report on the shape and freshness of the meta
+  context [project] [--json]      assemble recorded state with source locations
   zero [project]                 repair the scaffold, update the tool files
   freeze [project]               status: frozen
   thaw [project]                 status: active
@@ -46,8 +48,8 @@ More:
   omut help meta                 the format and the rules of the meta, before
                                  anything is laid down
 
-A single repository needs no pack: outside one, start, freeze, thaw, check and
-zero work on the project you are in, at any depth or from a linked worktree.
+A single repository needs no pack: outside one, start, freeze, thaw, check,
+context and zero work at any depth or from a linked worktree.
 
 omut never commits or stages, changes git config or installs hooks, edits
 agents' settings or uses the network. It runs git only to read, and writes
@@ -154,6 +156,46 @@ Exit code: 0 no findings at the failing level; 1 errors, or warnings too with
 --fail-on warn (CI and the badge use that), or no meta to check.
 `,
 
+	"context": `omut context [project] [--json]
+
+Assembles recorded state without a model, network, cache or writes. Text is
+copied from the meta with source paths and 1-based lines; only line endings are
+normalized. No claim is verified and no text is shortened to fit a budget.
+
+Scope (like check):
+  at a pack root          overview of the pack and all its projects
+  in a project            its current records, at any depth or in a worktree
+  a project name or path  that project; .. from a project means the whole pack
+  outside a pack          the project of the directory given or the current one
+
+Pack overview:
+  the pack's full brief and decisions
+  project status, updated/verified, Why, What it is, Now and Next
+  open/doubted decision lines and waiting ADR titles/statuses
+  unfinished thread titles, Goal, Open and Next step, with status and owner
+  check findings, including stale briefs and stalled threads
+  frozen projects: brief sections only, with no pending work listed
+
+Project records:
+  full brief and decisions, active/parked threads and waiting ADR bodies
+  filled local instance memory; the latest five entries from each log
+  check findings; private and main-checkout/worktree locations when applicable
+
+Pack overview omits project footprints, local memory, logs and decided project
+records. Use context <project> for its current records. Completed/dropped
+threads, decided ADR bodies and older history stay in their source files.
+Invalid selected records and read failures are reported, not silently skipped.
+
+--json emits the same selection as one object: scope, root, as_of, selection,
+pack (when applicable), projects, findings, problems and incomplete. Each
+project has metadata and sources with kind, file, line and literal text; thread
+sources also carry status, updated, by and parked_because. Source and finding
+paths are relative to root. Arrays are empty rather than null. Project and file
+order is stable; freshness findings depend on the date and filesystem/git state.
+
+Exit code: 0 assembled (warnings are included); 1 incomplete because of read or
+shape errors, or no meta. Partial output remains available, including in JSON.
+`,
 	"zero": `omut zero [project] [--by agent/model]
 
 Repairs the scaffold and brings the tool files to this version: this is how a
@@ -200,8 +242,8 @@ Do it with the human's consent, after a final "Now" and a log line. If "Where it
 lives" is not empty, freeze warns: make sure nothing still runs or spends money;
 check goes on warning (frozen-but-live) until that section is emptied.
 
-While frozen: start refuses, and open decisions and due claims are not listed.
-omut thaw undoes it.
+While frozen: start refuses; check and the pack context omit pending decisions,
+and the startup hook omits due claims. omut thaw undoes it.
 
 Exit code: 0 done or frozen already; 1 no brief, or a broken one.
 `,
@@ -272,8 +314,9 @@ meta in the main checkout and gives the agent the full path.
   start    at an agent's session start: prints the brief, this copy's memory,
            decisions waiting for the human, unfinished threads, what check
            found, claims due for checking, and work newer than the log that no
-           commit holds. In a pack root: tells the agent it is the lead, with
-           the pack's check.
+           commit holds. In a pack root: tells the agent it is the lead and
+           includes the same assembled overview as omut context, with sources,
+           findings and any incomplete-context notice.
   commit   as git's pre-commit: reminds on stderr when staged work is newer than
            .omut/log.md; blocks a commit carrying meta with shape errors.
 

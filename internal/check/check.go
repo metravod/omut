@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -471,23 +470,18 @@ func ADRs(dir string, brief *meta.Doc) ([]meta.ADR, error) {
 	if rel == "" {
 		return nil, nil
 	}
-	entries, err := os.ReadDir(filepath.Join(dir, rel))
+	paths, err := meta.ADRFiles(filepath.Join(dir, rel))
 	if err != nil {
 		return nil, err
 	}
 	var out []meta.ADR
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") || !adrNameRe.MatchString(e.Name()) {
-			continue
-		}
-		if d, err := meta.Read(filepath.Join(dir, rel, e.Name())); err == nil {
+	for _, path := range paths {
+		if d, err := meta.Read(path); err == nil {
 			out = append(out, meta.ParseADR(d))
 		}
 	}
 	return out, nil
 }
-
-var adrNameRe = regexp.MustCompile(`(?i)^(adr[-_]?)?\d+`)
 
 // checkADR lists the ADRs that wait for the human the way open and doubted
 // decisions are listed: with adr: in the brief, the ADRs are the registry

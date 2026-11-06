@@ -6,7 +6,7 @@ Open questions are at the end.
 
 A way to keep meta for a **pack of projects**. A pack is one root directory with projects inside. Any agent started in the root becomes the **lead**: it knows the whole pack and can tell what is going on where. An agent started inside a project works on that project and keeps its meta.
 
-There is no runtime of its own: only files and a small CLI that creates the structure and checks its shape.
+There is no runtime of its own: only files and a small CLI that creates the structure, checks its shape and assembles recorded context.
 
 ### Problems it solves
 
@@ -57,7 +57,7 @@ The meta can be checked. The lead doesn't just read what is written, it compares
 Every file has exactly one owner:
 - **Tool files** (`LEAD.md` in the root, `.omut/README.md` in every project): `zero` updates them to the current template. Nobody edits them by hand.
 - **User files** (`AGENTS.md`): the tool doesn't touch them, except for the block between `<!-- omut:start -->` and `<!-- omut:end -->`.
-- **Meta files** (`brief.md`, `decisions.md`, `graveyard.md`): agents write them. The tool only checks them and never overwrites them.
+- **Meta files** (`brief.md`, `decisions.md`, `graveyard.md`): agents write them. The tool reads and checks them and never overwrites them.
 
 The pointer block in the root `AGENTS.md`:
 
@@ -219,6 +219,26 @@ parked_because: doubt       # parked only: stamina | doubt | blocked | limits | 
 
 The list of projects is stored nowhere. It is the subdirectories of the root, except those in `ignore` and hidden ones.
 
+### 6.1 Assembled context
+
+`omut context [project] [--json]` moves file discovery and literal extraction from the lead into the CLI. It reads only: no model calls, generated summaries, persistent index, network or execution of a claim's `how`. Agents interpret the assembled records, verify claims and write the meaning. The view is still assembled on read (D4).
+
+At the pack root, the overview includes:
+
+- the pack's full brief and decisions;
+- each project's name, locations, visibility, status, updated/verified dates and complete **Why**, **What it is**, **Now** and **Next** sections;
+- `open`/`doubted` project decision lines and the literal titles (or status lines if untitled) and waiting statuses of ADRs recognized by §5;
+- active/parked thread titles and **Goal**, **Open**, **Next step** fields, including continuation lines, with status, updated date, author and parking reason;
+- the existing `check` findings. Frozen projects contribute brief sections only; their pending records are omitted, while `check` findings remain visible.
+
+The pack overview omits project footprints, local memory, project logs, completed/dropped threads and decided project records. Naming a project (or running inside it) includes its full brief and decisions, full active/parked threads, full waiting ADRs, filled `local/instance.md`, the latest five entries of each log and `check` findings. Completed/dropped threads, decided ADR bodies and older history stay in their source files. All decisions in `decisions.md` remain available in the project view, even for a frozen project. The absence of an empty `threads/` is normal: git does not preserve empty directories.
+
+Every excerpt carries its source file and 1-based starting line. Only line endings are normalized; there is no summarization or text truncation. Paths, including finding paths, are relative to the report's root; worktrees retain branch meta and main-checkout local/private memory (D17). Project and file order is stable; freshness depends on the date and filesystem/git state. Each output states its selection policy and date. Invalid selected records remain visible or are reported by shape findings; read and enumeration failures are explicit. A report with read or shape errors is marked incomplete and exits 1, retaining readable records; warnings alone exit 0. An absent optional local layer is normal, but a dangling symlink or another read failure is reported.
+
+JSON exposes the same selection as an object with `scope`, `root`, `as_of`, `selection`, optional `pack`, `projects`, `findings`, `problems` and `incomplete`. Project records contain metadata and `sources` (kind, file, line, literal text; section or thread/ADR metadata where applicable). Empty arrays are `[]`. The pack's startup hook uses this same overview and tells the lead not to reread the supplied sources merely to assemble them again; `LEAD.md` still supplies the lead's rules. A project startup hook keeps its existing session-specific context and reminders.
+
+This reduces model-driven file-discovery calls. It does not establish a token or task-quality improvement: the amount of selected context still matters.
+
 ## 7. Commands
 
 All are non-interactive, so an agent can call them. Destructive operations need an explicit flag.
@@ -231,8 +251,9 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | `thaw [name]` | `status: active`. |
 | `kill <name> --yes --reason "..."` | Removes the project directory and writes a tombstone (the reason is required; "what it was" comes from "Why"). Without `--force`, refuses when there are uncommitted changes, gitignored files that no build recreates (`.env`, local data, meta kept out of git; caches such as `node_modules/`, `target/`, `.venv/` don't count), or commits that are on no remote, and always for a project without git: there is no copy anywhere. A symlinked project loses only the link. Prints where the project is mentioned in other projects' meta; fixing those mentions is the agent's job. |
 | `check [name]` | A report that changes nothing (rules in section 8). Without a name: in a project of a pack, at any depth, that project; at the root, the whole pack (from a project, `..` names it); outside a pack, the project you are in at any depth or from a linked worktree, if it has `.omut/`. `--json` for agents and automation. Exits non-zero on shape errors; `--fail-on warn` on warnings too, for CI and its badge. |
+| `context [name] [--json]` | Assemble the pack overview or a project's current records, with sources and existing check findings (§6.1). Same scope rules as `check`, including `..`, deep subdirectories and worktrees. No model, writes or claim execution. Exit 1 for read/shape errors with partial output retained; warnings alone exit 0. |
 | `zero [name]` | Repairs the scaffold: updates the tool files to the current template, creates missing files from templates, fixes the pointer block. Never touches meta files; only lists their shape errors. Without a name: in a project of a pack, at any depth, that project, if it has `.omut/`; at the root, the root (from a project, `..` names it); outside a pack, the project you are in at any depth or from a linked worktree. In a linked worktree with committed meta it doesn't create `local/`. Removes tool files of earlier versions (the root's `conventions.md`). In a private project the block goes into `CLAUDE.local.md` unless `AGENTS.md` has it already, and no `CLAUDE.md` link is made. This is also how a pack is updated after a new release. |
-| `hook start\|commit` | For hooks, never called by hand: `start` prints the context a session starts from (brief, decisions waiting, unfinished threads, findings, and work newer than the last log write that no commit holds), `commit` is a git pre-commit check (a reminder when staged work is newer than the log, a block when the commit carries meta with shape errors; `--strict` also blocks work without a log entry). `--agent claude\|codex\|cursor` reads that agent's payload and answers in its format. Silent outside any meta. Recipes: [`hooks.md`](hooks.md). |
+| `hook start\|commit` | For hooks, never called by hand: `start` prints the context a session starts from (brief, decisions waiting, unfinished threads, findings, and work newer than the last log write that no commit holds). At a pack root, it supplies the same deterministic overview as `context` (§6.1), plus lead instructions. `commit` is a git pre-commit check (a reminder when staged work is newer than the log, a block when the commit carries meta with shape errors; `--strict` also blocks work without a log entry). `--agent claude\|codex\|cursor` reads that agent's payload and answers in its format. Silent outside any meta. Recipes: [`hooks.md`](hooks.md). |
 | `help [command\|meta]` | Without an argument, the overview. `help <command>` (the same as `<command> --help` or `-h`, which win over anything else on the line) says what the command writes, what it leaves alone, when it refuses, its flags and exit codes: enough to decide without trying it in a scratch repository. The flags come from their definitions, and tests compare the rest with the commands and the `check` rules with section 8. `help meta` prints the rules a project would get as `.omut/README.md`, before anything is laid down. |
 
 `freeze`, `thaw` and `start` on an existing directory are the only places where the CLI touches meta files. They change the single `status` field or create missing templates.
@@ -278,7 +299,7 @@ The rituals are written in the tool files. Any agent carries them out.
 - **Freezing.** A final "Now", a log line, check "Where it lives", then `freeze`.
 
 **In the root** (`LEAD.md`):
-- **Overview.** Run `check` and read the `brief.md` of active projects. Tell the human what waits for them: open decisions, doubts, stalled threads, mismatches.
+- **Overview.** Use `context` (already supplied by the pack startup hook); request full current project records with `context <project>` only when needed. Without the CLI, read the equivalent source files. Tell the human what waits for them: open decisions, doubts, stalled threads, mismatches. Treat incomplete output and recorded freshness explicitly; assembly does not verify the contents.
 - **Audit.** Check "Where it lives" and "Now" against reality with whatever is at hand (ssh, git, logs). Update `verified`. Don't fix mismatches silently; show them to the human.
 - **Project story.** Explain a project in a couple of minutes from `brief.md` and the decisions, without reading the code.
 - **Routing.** Match a vague request ("what's up with the site") to a project by "Why" and "What it is".

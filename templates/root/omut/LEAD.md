@@ -12,7 +12,7 @@ The list of projects is stored nowhere: it is the subdirectories of the root, ex
 
 ## Rituals
 
-- **Overview** ("what's going on"). Run `omut check`, read the `brief.md` of the active projects. Tell the human what waits for them: open and doubted decisions, stalled threads, stale briefs, mismatches. Start with what needs a decision.
+- **Overview** ("what's going on"). Use `omut context`: it assembles the pack's context, project brief sections, waiting decisions, unfinished thread summaries and check findings, with source locations. The startup hook already supplies this overview; don't reread the same files just to assemble it again. Use `omut context <project>` for full current records when needed. Without the CLI, read the same source files. Tell the human what waits for them: open and doubted decisions, stalled threads, stale briefs, mismatches. Start with what needs a decision. The overview is recorded state, not a verification against reality; it explicitly says what it omits and if data could not be read.
 - **Audit.** Check "Where it lives" (the brief's public footprint and each project's `.omut/local/instance.md`, claim by claim: run its `how`, update its `seen`) and "Now" against reality with whatever you have: git, ssh, logs, processes, cron, installed symlinks. Update `verified`. Don't fix a mismatch silently; show it to the human.
 - **Project story.** Explain a project in a couple of minutes from `brief.md` and the decisions, without reading the code.
 - **Routing.** Match a vague request ("what's up with the site") to a project by "Why" and "What it is". Not sure? Name the candidates and ask.
@@ -28,6 +28,7 @@ All are non-interactive. The CLI never writes meta: that is your job.
 | Command | What it does |
 |---|---|
 | `omut check [project] [--json]` | Report on the shape and freshness of the meta. Exits non-zero on shape errors. |
+| `omut context [project] [--json]` | Assemble the pack overview or a project's current records, with sources and findings; no model and no writes. |
 | `omut start <name>` | A new project, or adopt an existing directory: `.omut/` templates, a block in `AGENTS.md`. |
 | `omut freeze <name>` / `thaw <name>` | `status: frozen` / `active` in the brief. |
 | `omut kill <name> --yes --reason "..."` | Remove a project, write a tombstone, print the mentions. Without `--force` it refuses when there is uncommitted or unpushed work, gitignored files no build recreates (`.env`, local data), or no git at all. |

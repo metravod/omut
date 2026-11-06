@@ -12,7 +12,7 @@ Status: v0.8, early and used daily on a real pack of projects. Questions and sto
 
 Agents build the projects, and you stop remembering what is where and why. Something runs on a server for half a year though it was meant for a week. A project moves from Claude Code to Codex, or to a colleague, or back to you three months later, and the new reader digs through the code to find out what was decided and what comes next.
 
-omut keeps the answers next to the project, in files any agent that reads `AGENTS.md` can keep: no server, no database, no vendor. The CLI never writes the meaning itself; it lays down templates and checks the shape and freshness of what agents wrote.
+omut keeps the answers next to the project, in files any agent that reads `AGENTS.md` can keep: no server, no database, no vendor. The CLI never writes the meaning itself; it lays down templates, checks their shape and freshness, and assembles recorded context for the agent.
 
 A [worked handoff on omut itself](docs/handoff.md) shows a fresh session finishing a recorded task, a controlled interruption in a worktree, and what the checks do and do not establish.
 
@@ -107,9 +107,15 @@ Most people have more than one. A directory of projects can become a pack with a
 cd ~/projects && omut init      # the pack root: AGENTS.md, .omut/LEAD.md, pack meta
 omut start hn-parser            # adopt a directory in the pack
 omut check                      # across the pack: what is stale, unfilled, waiting for you
+omut context                    # assembled overview, with source locations
+omut context hn-parser          # full current records of one project
 ```
 
 An agent started in the root is the lead: it knows the whole pack and tells you what is where. Started in a project, it keeps that project's meta.
+
+The lead's startup hook supplies the same overview as `omut context`: pack context, project status and current brief sections, waiting decisions, unfinished thread summaries and check findings. The CLI collects literal records with source paths and lines; the agent interprets them. It needs no model calls to discover and assemble the files.
+
+The overview omits project footprints, local memory, logs and decided project records; `omut context <project>` includes the full brief and decisions, unfinished threads, waiting ADRs, filled local memory and the latest five entries from each log. Completed threads and older history remain in their source files. Read failures and shape errors mark the output incomplete and return exit 1; warnings remain visible with exit 0. `--json` exposes the same selection for other tools. This reduces file-discovery calls; token savings depend on how much context is selected.
 
 | Command | What it does |
 |---|---|
@@ -118,10 +124,11 @@ An agent started in the root is the lead: it knows the whole pack and tells you 
 | `freeze` / `thaw [project]` | freeze / unfreeze |
 | `kill <project> --yes --reason "..."` | remove, write a tombstone, list the mentions; refuses over unsaved work |
 | `check [project] [--json] [--fail-on warn]` | the report; non-zero exit on shape errors |
+| `context [project] [--json]` | assembled pack overview or full current project records, with sources |
 | `zero [project]` | repair the scaffold, update the tool files |
 | `hook start\|commit` | session context for agents, a git pre-commit reminder ([recipes](docs/hooks.md)) |
 
-`check`, `zero`, `freeze` and `thaw` work on a single repository without a pack, from any subdirectory or git worktree of it. In a subdirectory, `omut start` won't lay a second meta by accident; `omut start .` gives it its own, for a part of a monorepo. The templates are plain markdown in [`templates/`](templates/), so all of it can be set up by hand too.
+`check`, `context`, `zero`, `freeze` and `thaw` work on a single repository without a pack, from any subdirectory or git worktree of it. In a subdirectory, `omut start` won't lay a second meta by accident; `omut start .` gives it its own, for a part of a monorepo. The templates are plain markdown in [`templates/`](templates/), so all of it can be set up by hand too.
 
 ## Install
 

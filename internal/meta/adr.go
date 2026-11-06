@@ -1,6 +1,8 @@
 package meta
 
 import (
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -18,9 +20,26 @@ type ADR struct {
 }
 
 var (
+	adrNameRe    = regexp.MustCompile(`(?i)^(adr[-_]?)?\d+`)
 	statusLineRe = regexp.MustCompile(`(?i)^(?:[*-]\s+)?(?:\*\*)?status(?:\*\*)?\s*:\s*(?:\*\*)?\s*(.*)$`)
 	firmnessRe   = regexp.MustCompile(`(?i)^(?:[*-]\s+)?(?:\*\*)?firmness(?:\*\*)?\s*:\s*(?:\*\*)?\s*tentative\b`)
 )
+
+// ADRFiles lists the numbered markdown records recognized by omut, sorted
+// by filename. Reading them separately lets callers report individual failures.
+func ADRFiles(dir string) ([]string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	var paths []string
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") && adrNameRe.MatchString(e.Name()) {
+			paths = append(paths, filepath.Join(dir, e.Name()))
+		}
+	}
+	return paths, nil
+}
 
 // ParseADR reads an ADR's title and status.
 func ParseADR(d *Doc) ADR {

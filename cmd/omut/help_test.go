@@ -128,12 +128,13 @@ func TestHelpListsEveryCommandAndFlag(t *testing.T) {
 		}
 	}
 	for cmd, flags := range map[string][]string{
-		"start": {"--private", "--by agent/model"},
-		"check": {"--fail-on level", "--json"},
-		"zero":  {"--by agent/model"},
-		"init":  {"--by agent/model"},
-		"kill":  {"--yes", "--force", "--reason text"},
-		"hook":  {"--agent name", "--strict"},
+		"start":   {"--private", "--by agent/model"},
+		"check":   {"--fail-on level", "--json"},
+		"context": {"--json"},
+		"zero":    {"--by agent/model"},
+		"init":    {"--by agent/model"},
+		"kill":    {"--yes", "--force", "--reason text"},
+		"hook":    {"--agent name", "--strict"},
 	} {
 		out := must(t, dir, "help", cmd)
 		_, section, ok := strings.Cut(out, "\nFlags:\n")

@@ -82,12 +82,26 @@ func (p *Pack) Ignore() []string {
 // everything except hidden ones (.omut/ among them) and the ignore list. Symlinked
 // directories count, so a pack can be assembled from links.
 func (p *Pack) Projects() ([]string, error) {
+	names, _, err := p.ScanProjects()
+	return names, err
+}
+
+type ProjectProblem struct {
+	Path string
+	Err  error
+}
+
+// ScanProjects uses the same discovery rules as Projects, also exposing
+// entries that cannot be inspected (for example, a dangling project symlink).
+// Existing callers of Projects retain their original skip-on-stat-error policy.
+func (p *Pack) ScanProjects() ([]string, []ProjectProblem, error) {
 	entries, err := os.ReadDir(p.Root)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	ignore := p.Ignore()
 	var out []string
+	var problems []ProjectProblem
 	for _, e := range entries {
 		name := e.Name()
 		// A linked worktree is a working copy of a project, not one more.
@@ -95,12 +109,16 @@ func (p *Pack) Projects() ([]string, error) {
 			continue
 		}
 		info, err := os.Stat(filepath.Join(p.Root, name))
-		if err != nil || !info.IsDir() {
+		if err != nil {
+			problems = append(problems, ProjectProblem{Path: filepath.Join(p.Root, name), Err: err})
+			continue
+		}
+		if !info.IsDir() {
 			continue
 		}
 		out = append(out, name)
 	}
-	return out, nil
+	return out, problems, nil
 }
 
 // Current is the project the working directory is in, at any depth. ok is

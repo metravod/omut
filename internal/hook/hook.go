@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/metravod/omut/internal/check"
+	"github.com/metravod/omut/internal/context"
 	"github.com/metravod/omut/internal/meta"
 	"github.com/metravod/omut/internal/pack"
 )
@@ -35,10 +36,8 @@ func startPack(root string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# omut: the pack %s\n\n", root)
 	b.WriteString("You were started in a pack root, so you are the lead: read `.omut/LEAD.md` before anything else.\n")
-	p := &pack.Pack{Root: root}
-	if fs, err := check.Pack(p, check.Options{}); err == nil {
-		writeFindings(&b, fs, true)
-	}
+	b.WriteString("The pack overview is assembled below; do not reread those sources just to assemble it again. Use `omut context <project>` when you need the full current project records.\n\n")
+	b.WriteString(context.ForPack(&pack.Pack{Root: root}, check.Options{}).Markdown())
 	return b.String()
 }
 

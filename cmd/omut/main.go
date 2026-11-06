@@ -63,6 +63,8 @@ func dispatch(cmd string, args []string, out io.Writer) error {
 		return cmdKill(args, out)
 	case "check":
 		return cmdCheck(args, out)
+	case "context":
+		return cmdContext(args, out)
 	case "zero":
 		return cmdZero(args, out)
 	case "hook":
