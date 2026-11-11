@@ -68,7 +68,7 @@ func startProject(pl pack.Place) string {
 	lead := filepath.Join(dir, pack.MetaDir)
 	var b strings.Builder
 	fmt.Fprintf(&b, "# omut: the meta of %s\n\n", filepath.Base(dir))
-	b.WriteString("This project keeps its meta in `.omut/` (rules: `.omut/README.md`). Below is what to read at the start. When a piece of work is done, record it before you tell the human it is done: a line at the top of `.omut/log.md`, \"Now\" in `.omut/brief.md`, a thread for what is left. You won't see the session end, so don't wait for it.\n")
+	b.WriteString("This project keeps its meta in `.omut/` (rules: `.omut/README.md`). Below is what to read at the start. When a piece of work is done, record it before you tell the human it is done: a log line, \"Now\" in the brief, a thread for what is left. You won't see the session end, so don't wait for it.\n")
 
 	writeWorktree(&b, pl)
 	if pack.Private(dir) {
@@ -189,13 +189,13 @@ func writeDue(b *strings.Builder, dir, instance string) {
 	}
 	b.WriteString("\n## Check while you are here\n\n")
 	if len(due) > 0 {
-		b.WriteString("Claims about where the project lives, the longest unchecked first. Run each `how` (ask the human first where it touches servers or anything outside this directory) and compare with the claim. If it holds, set its `seen` to today. If it doesn't, tell the human and fix the line with them. Note what you saw, not just \"checked\", in `.omut/local/log.md`.\n")
+		b.WriteString("Claims about where the project lives, the longest unchecked first; the lines with their `how` are in the memory above. Run each `how` (ask the human first where it touches servers or anything outside this directory), compare, and set `seen` to today if it holds. Note what you saw, not just \"checked\", in `.omut/local/log.md`.\n")
 		for _, c := range due {
 			seen := "never"
 			if c.Seen != "" {
 				seen = c.Seen
 			}
-			fmt.Fprintf(b, "- `%s:%d` %s · how: `%s` · seen %s\n", c.File, c.Line, c.Text, c.How, seen)
+			fmt.Fprintf(b, "- `%s:%d` · seen %s\n", c.File, c.Line, seen)
 		}
 	}
 	if unchecked > 0 {
@@ -207,25 +207,37 @@ func writeDue(b *strings.Builder, dir, instance string) {
 	}
 }
 
-// writeInstance adds the instance layer (D15) when it says anything:
-// this copy's footprint, access and runbook, and its latest events.
+// writeInstance adds the instance layer (D15) when it says anything: this
+// copy's footprint with its claims, and a pointer to the rest. Access and
+// Runbook serve deploy-type sessions; every session pays only the pointer.
 func writeInstance(b *strings.Builder, lead string) {
 	local := filepath.Join(lead, pack.Local)
-	if d, err := meta.Read(filepath.Join(local, pack.Instance)); err == nil {
-		filled := false
-		for _, s := range d.Sections() {
-			filled = filled || d.Filled(s)
-		}
-		if filled || d.Front["plan"] != "" {
-			b.WriteString("\n## .omut/local/instance.md (this copy only, never in git)\n\n")
-			b.WriteString(strings.TrimRight(strings.Join(d.Lines, "\n"), "\n") + "\n")
-		}
-		writePlan(b, filepath.Dir(lead), d, true)
+	instance, err := meta.Read(filepath.Join(local, pack.Instance))
+	if err != nil {
+		return
 	}
+	live, hasLive := instance.Section("Where it lives")
+	if (!hasLive || !instance.Filled(live)) && instance.Front["plan"] == "" {
+		return
+	}
+	b.WriteString("\n## .omut/local/instance.md (this copy only, never in git)\n\n")
+	if instance.HasFront {
+		b.WriteString(strings.TrimRight(strings.Join(instance.Lines[:instance.BodyStart], "\n"), "\n") + "\n")
+	}
+	if hasLive && instance.Filled(live) {
+		b.WriteString(strings.TrimRight(strings.Join(instance.Lines[live.Line-1:live.End], "\n"), "\n") + "\n")
+	}
+	if access, ok := instance.Section("Access"); ok && instance.Filled(access) {
+		b.WriteString("\nAccess (secrets, accounts) stays in that file; read it when this session touches them.\n")
+	}
+	if runbook, ok := instance.Section("Runbook"); ok && instance.Filled(runbook) {
+		b.WriteString("\nRunbook (deploy, roll back, restart, move) stays in that file; read it when this session deploys or moves anything.\n")
+	}
+	writePlan(b, filepath.Dir(lead), instance, true)
 	if d, err := meta.Read(filepath.Join(local, pack.Log)); err == nil {
 		entries, _ := d.LogEntries()
-		if len(entries) > 5 {
-			entries = entries[:5]
+		if len(entries) > 3 {
+			entries = entries[:3]
 		}
 		if len(entries) > 0 {
 			b.WriteString("\n## This copy's latest events (.omut/local/log.md)\n\n")
@@ -242,7 +254,15 @@ func writePlan(b *strings.Builder, dir string, owner *meta.Doc, local bool) {
 		fmt.Fprintf(b, "\n## Incomplete plan context\n\n`%s:%d`: %v\n", owner.Path, owner.FrontLine["plan"], err)
 		return
 	}
-	if d != nil {
+	if d == nil {
+		return
+	}
+	// A plan that is parked or dropped is not this session's work: one
+	// pointer line instead of the body. No frontmatter means active.
+	switch d.Front["status"] {
+	case "parked", "dropped":
+		fmt.Fprintf(b, "\n## Work plan — `%s:1` (%s)\n\nNot this session's work; the full index is in the file and in `omut context`.\n", d.Path, d.Front["status"])
+	default:
 		fmt.Fprintf(b, "\n## Work plan — `%s:1`\n\n%s\n", d.Path, strings.Join(d.Lines, "\n"))
 	}
 }

@@ -759,9 +759,9 @@ func TestClaimsAreCheckedByAgents(t *testing.T) {
 
 	out, _, _ := hookRun(t, dir, "", "start")
 	_, out, _ = strings.Cut(out, "## Check while you are here")
-	i, j := strings.Index(out, "`.omut/local/instance.md:7` cron on vps1"), strings.Index(out, "`.omut/local/instance.md:6` skill hn")
-	if i < 0 || j < i || strings.Count(out, "· how: `") != 2 || strings.Contains(out, "PyPI: hn 1.0") {
-		t.Errorf("hook start should offer the never-seen claim, then the oldest, two at most, not the fresh one:\n%s", out)
+	i, j := strings.Index(out, "`.omut/local/instance.md:7` · seen never"), strings.Index(out, "`.omut/local/instance.md:6` · seen "+day(40))
+	if i < 0 || j < i || strings.Count(out, "· how: `") != 0 || strings.Contains(out, "PyPI: hn 1.0") {
+		t.Errorf("hook start should offer the never-seen claim, then the oldest, two at most, as locations only (D26), not the fresh one:\n%s", out)
 	}
 	if !strings.Contains(out, "1 claim about where the project lives says no way to check it") {
 		t.Errorf("hook start does not count the unchecked claim:\n%s", out)

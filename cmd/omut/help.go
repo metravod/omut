@@ -369,16 +369,18 @@ exits 0 where there is no meta, so it is safe to install globally. omut installs
 no hook itself: those files are yours. In a linked worktree it finds the clone's
 meta in the main checkout and gives the agent the full path.
 
-  start    at an agent's session start: prints the brief, this copy's memory,
-           explicit project/local work plans (without following cards),
-           decisions waiting for the human, unfinished threads, what check
-           found, claims due for checking, work newer than the log that no
-           commit holds, and — when the memory grew past the brief's dream:
-           threshold since dreamed: — one line asking the agent to offer a
-           dream (omut help dream). In a pack root: tells the agent it is the
-           lead and includes the same assembled overview as omut context, with
-           sources, local Git observations, findings and incomplete-context
-           notices.
+  start    at an agent's session start: prints the brief, this copy's footprint
+           (Access and Runbook stay in the file behind a pointer), explicit
+           project/local work plans — a parked or dropped plan as a pointer
+           line — decisions waiting for the human, unfinished threads, what
+           check found, claims due for checking (locations; their lines are in
+           the memory above), the latest three local events, work newer than
+           the log that no commit holds, and — when the memory grew past the
+           brief's dream: threshold since dreamed: — one line asking the agent
+           to offer a dream (omut help dream). In a pack root: tells the agent
+           it is the lead and includes the same assembled overview as omut
+           context, with sources, local Git observations, findings and
+           incomplete-context notices.
   preview  with start: prints what a session would get, without an agent
            payload. How a human sees what the agent sees, and how a silent
            hook is debugged.

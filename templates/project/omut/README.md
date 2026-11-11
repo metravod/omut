@@ -64,7 +64,7 @@ Body: `# Title`, then the lines `**Goal:**`, `**Where we got:**`, `**Verified:**
 
 **Optional work plans: goals and tasks.** Add `plan: docs/work-plan.md` to the brief's frontmatter, or `plan: work/README.md` to `local/instance.md` for a copy-only package (relative to `.omut/local/`, kept in the main checkout). Both may exist for different work; never mirror the same task's state between them. Keep the human's existing choice of visibility. A project plan cannot point into `local/`, including through a symlink. Each pointer names one regular `.md` file within its layer; absolute paths and escapes through `..` or symlinks are rejected.
 
-Adopt an existing plan as it is; don't make a second registry. No frontmatter, headings or task syntax are required in that file. For a new plan, use this outline:
+Adopt an existing plan as it is; don't make a second registry. No frontmatter, headings or task syntax are required in that file. An optional frontmatter `status:` (`active` by default; `parked`, `dropped`) marks a plan that is not current work: the startup context shows it as a pointer line, `context` keeps the full text. For a new plan, use this outline:
 
 ```markdown
 # Work plan

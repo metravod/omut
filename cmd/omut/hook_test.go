@@ -124,6 +124,45 @@ func TestHookCommit(t *testing.T) {
 	}
 }
 
+// The startup context is lean by selection (D26): a parked plan is a pointer,
+// claims are not repeated with their lines, Access/Runbook stay behind a
+// pointer, the local log caps at three entries.
+func TestHookStartLeanSelection(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "hn")
+	standalone(t, dir, time.Now().Format("2006-01-02"))
+	today := time.Now().Format("2006-01-02")
+	write(t, filepath.Join(dir, ".omut/local/instance.md"), "---\nupdated: "+today+"\nby: t/t\nplan: plans/x.md\n---\n## Where it lives\n- checkout here · how: `pwd` · seen 2026-10-01\n\n## Access\n- tokens in the password manager\n\n## Runbook\n- deploy with the script\n")
+	write(t, filepath.Join(dir, ".omut/local/plans/x.md"), "---\nstatus: parked\n---\n# Package X\n\nMARKER-FULL-PLAN-BODY\n")
+	log := ""
+	for i := 1; i <= 5; i++ {
+		log += "- 2026-11-10 · t/t · event " + string(rune('0'+i)) + "\n"
+	}
+	write(t, filepath.Join(dir, ".omut/local/log.md"), log)
+
+	out, _, err := hookRun(t, dir, "", "start")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "MARKER-FULL-PLAN-BODY") || !strings.Contains(out, "(parked)") {
+		t.Errorf("parked plan not collapsed:\n%s", out)
+	}
+	if strings.Contains(out, "## Access") || strings.Contains(out, "## Runbook") || !strings.Contains(out, "stays in that file") {
+		t.Errorf("Access/Runbook not behind a pointer:\n%s", out)
+	}
+	if strings.Count(out, "`pwd`") != 1 || !strings.Contains(out, "- `.omut/local/instance.md:") || !strings.Contains(out, "· seen 2026-10-01") {
+		t.Errorf("due claims not reduced to locations:\n%s", out)
+	}
+	if strings.Contains(out, "event 4") || !strings.Contains(out, "event 3") {
+		t.Errorf("local log not capped at three:\n%s", out)
+	}
+
+	// Without the status the plan travels in full.
+	write(t, filepath.Join(dir, ".omut/local/plans/x.md"), "# Package X\n\nMARKER-FULL-PLAN-BODY\n")
+	if out, _, _ := hookRun(t, dir, "", "start"); !strings.Contains(out, "MARKER-FULL-PLAN-BODY") {
+		t.Errorf("an active plan lost its body:\n%s", out)
+	}
+}
+
 func TestHookStartUnrecordedWork(t *testing.T) {
 	// Without git: any file newer than the log.
 	proj := filepath.Join(t.TempDir(), "hn")
