@@ -38,6 +38,16 @@ Two optional steps:
   ```
 - **The badge.** In a public GitHub repository `omut start` prints a badge for `README.md`: it links readers to `.omut/` and stays green while CI finds the meta fresh and well-formed ([workflow](docs/hooks.md#ci-and-the-badge)). It checks structure and recorded dates; agents and humans still have to verify the contents. This repository wears one.
 
+## Let the memory sleep
+
+Memory grows with every session, and grown memory lies more: duplicates pile up in "Now", decisions that reality has outgrown keep pretending they hold. `omut dream` hands the whole memory to an agent and asks it to consolidate: re-read everything, compare with reality, and come back with a short report of what to merge, supersede and verify — nothing changes until you approve.
+
+The reminder is by volume, not by the calendar: when enough records pile up after the last dream (the brief's `dream:`, 10 by default), the startup hook asks the agent to offer one. Recipes for running the dream by hand or on a schedule: [docs/dream.md](docs/dream.md).
+
+```sh
+omut dream | claude -p "Follow the dream contract."
+```
+
 ## On a repository that is not yours
 
 A work project, a team that doesn't use omut yet, someone else's open source: you can't commit `.omut/` there, but your agents still forget what they learned yesterday. Keep the meta for yourself:

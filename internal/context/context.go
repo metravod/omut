@@ -376,9 +376,12 @@ func (r *Report) log(p *Project, path string, optional bool) {
 }
 
 // Markdown is the same selection as JSON, with explicit source locations.
+// Stable first, volatile last: the recorded meta changes rarely, so it opens
+// the text and an inference prefix cache survives; what this run observed
+// (Git state, findings, the as-of date) closes it.
 func (r *Report) Markdown() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# omut context: %s\n\nRoot: `%s` · as of %s\n\nSelection: %s\n\nMeta excerpts are recorded state, not a verification of their truth. Their paths are relative to Root. Git observations are current local reads; divergence uses cached local refs, not a server check. Full diffs are omitted.\n", r.Scope, r.Root, r.AsOf, r.Selection)
+	fmt.Fprintf(&b, "# omut context: %s\n\nRoot: `%s`\n\nSelection: %s\n\nMeta excerpts are recorded state, not a verification of their truth. Their paths are relative to Root. Git observations are current local reads; divergence uses cached local refs, not a server check. Full diffs are omitted.\n", r.Scope, r.Root, r.Selection)
 	writeProject := func(p Project, isPack bool) {
 		fmt.Fprintf(&b, "\n## %s\n\nDirectory: `%s`\n", p.Name, p.Dir)
 		if isPack {
@@ -394,9 +397,6 @@ func (r *Report) Markdown() string {
 		}
 		if p.Instance != p.Dir {
 			fmt.Fprintf(&b, "This copy's memory: `%s` (main checkout).\n", filepath.Join(p.Instance, pack.MetaDir, pack.Local))
-		}
-		if p.Git != nil {
-			b.WriteString(p.Git.markdown())
 		}
 		for _, s := range p.Sources {
 			fmt.Fprintf(&b, "\n### %s — `%s:%d`", s.Kind, s.File, s.Line)
@@ -414,6 +414,9 @@ func (r *Report) Markdown() string {
 				fmt.Fprintf(&b, " · by %s", s.By)
 			}
 			fmt.Fprintf(&b, "\n\n%s\n", s.Text)
+		}
+		if p.Git != nil {
+			b.WriteString(p.Git.markdown())
 		}
 	}
 	if r.Pack != nil {
@@ -435,5 +438,6 @@ func (r *Report) Markdown() string {
 	for _, p := range r.Problems {
 		fmt.Fprintf(&b, "- `%s`: %s\n", p.File, p.Message)
 	}
+	fmt.Fprintf(&b, "\nAs of %s.\n", r.AsOf)
 	return b.String()
 }

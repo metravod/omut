@@ -25,18 +25,19 @@ func cmdHook(args []string, out io.Writer, stdin *os.File, stderr io.Writer) err
 	fs := flag.NewFlagSet("hook", flag.ContinueOnError)
 	agent := fs.String("agent", "", "`name` the agent calling: claude, codex or cursor; reads its JSON payload and answers in its format")
 	strict := fs.Bool("strict", false, "commit: block work committed without a log entry")
+	preview := fs.Bool("preview", false, "start: print what a session would get, without an agent payload; also the debug view for a silent hook")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
 	}
 	if len(pos) != 1 {
-		return errors.New("omut hook start|commit [--agent claude|codex|cursor] [--strict]")
+		return errors.New("omut hook start|commit [--agent claude|codex|cursor] [--strict] [--preview]")
 	}
 	if *agent != "" && !slices.Contains(agents, *agent) {
 		return fmt.Errorf("--agent %q: known are claude, codex, cursor", *agent)
 	}
 	dir := "."
-	if *agent != "" {
+	if *agent != "" && !*preview {
 		if in := readInput(stdin); in.Cwd != "" {
 			dir = in.Cwd
 		} else if len(in.WorkspaceRoots) > 0 {
@@ -49,12 +50,15 @@ func cmdHook(args []string, out io.Writer, stdin *os.File, stderr io.Writer) err
 		if text == "" {
 			return nil
 		}
-		if *agent == "cursor" {
+		if *agent == "cursor" && !*preview {
 			return json.NewEncoder(out).Encode(map[string]string{"additional_context": text})
 		}
 		fmt.Fprint(out, text)
 		return nil
 	case "commit":
+		if *preview {
+			return errors.New("hook commit has no --preview")
+		}
 		res := hook.Commit(dir, *strict)
 		fmt.Fprint(stderr, res.Message)
 		if res.Block {

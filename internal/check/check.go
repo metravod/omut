@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -149,6 +150,7 @@ func checkRoot(r *report, p *pack.Pack) {
 				r.add("shape", Warn, d.Path, d.FrontLine["ignore"], "ignore lists %q, there is no such directory", name)
 			}
 		}
+		checkDreamFields(r, d)
 		checkRefs(r, d, p.Root)
 	}
 	if d, err := meta.Read(p.Lead(pack.Decisions)); err == nil {
@@ -261,6 +263,7 @@ func checkBrief(r *report, d *meta.Doc, dir string, opt Options) {
 	if _, ok := d.Front["updated"]; ok && !updatedOK {
 		r.add("shape", Error, d.Path, d.FrontLine["updated"], "updated %q: want a YYYY-MM-DD date", d.Front["updated"])
 	}
+	checkDreamFields(r, d)
 	if _, ok := d.Front["by"]; ok && d.Front["by"] == "" {
 		r.add("unfilled", Warn, d.Path, d.FrontLine["by"], "by is empty: who wrote the brief (agent/model or human)")
 	}
@@ -299,6 +302,22 @@ func checkBrief(r *report, d *meta.Doc, dir string, opt Options) {
 
 func dayAfter(t, day time.Time) bool {
 	return t.Format(meta.DateLayout) > day.Format(meta.DateLayout)
+}
+
+// checkDreamFields validates the optional dreamed:/dream: frontmatter: the
+// date of the last dream and the record threshold the sleep reminder counts
+// to. Both absent is normal; an empty dreamed: counts as absent.
+func checkDreamFields(r *report, d *meta.Doc) {
+	if v, ok := d.Front["dreamed"]; ok && v != "" {
+		if _, ok := meta.ParseDate(v); !ok {
+			r.add("shape", Error, d.Path, d.FrontLine["dreamed"], "dreamed %q: want a YYYY-MM-DD date", v)
+		}
+	}
+	if v, ok := d.Front["dream"]; ok && v != "" {
+		if n, err := strconv.Atoi(v); err != nil || n < 1 {
+			r.add("shape", Error, d.Path, d.FrontLine["dream"], "dream %q: want a number of records, 1 or more", v)
+		}
+	}
 }
 
 // newestChange finds the latest change in the project outside .omut/. In a

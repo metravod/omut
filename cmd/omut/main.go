@@ -65,6 +65,8 @@ func dispatch(cmd string, args []string, out io.Writer) error {
 		return cmdCheck(args, out)
 	case "context":
 		return cmdContext(args, out)
+	case "dream":
+		return cmdDream(args, out)
 	case "zero":
 		return cmdZero(args, out)
 	case "hook":

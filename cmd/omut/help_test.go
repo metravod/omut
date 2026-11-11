@@ -131,10 +131,11 @@ func TestHelpListsEveryCommandAndFlag(t *testing.T) {
 		"start":   {"--private", "--by agent/model"},
 		"check":   {"--fail-on level", "--json"},
 		"context": {"--json"},
+		"dream":   {"--apply", "--json"},
 		"zero":    {"--by agent/model"},
 		"init":    {"--by agent/model"},
 		"kill":    {"--yes", "--force", "--reason text"},
-		"hook":    {"--agent name", "--strict"},
+		"hook":    {"--agent name", "--strict", "--preview"},
 	} {
 		out := must(t, dir, "help", cmd)
 		_, section, ok := strings.Cut(out, "\nFlags:\n")

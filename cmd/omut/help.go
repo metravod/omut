@@ -33,6 +33,9 @@ Commands:
   check [project] [--json] [--fail-on warn]
                                  report on the shape and freshness of the meta
   context [project] [--json]      assemble meta and observe local Git state
+  dream [project] [--apply] [--json]
+                                 a consolidation digest and contract for the
+                                 dream agent; omut help dream
   zero [project]                 repair the scaffold, update the tool files
   freeze [project]               status: frozen
   thaw [project]                 status: active
@@ -49,7 +52,7 @@ More:
                                  anything is laid down
 
 A single repository needs no pack: outside one, start, freeze, thaw, check,
-context and zero work at any depth or from a linked worktree.
+context, dream and zero work at any depth or from a linked worktree.
 
 omut never commits or stages, changes git config or installs hooks, edits
 agents' settings or uses the network. It runs git only to read, and writes
@@ -215,6 +218,42 @@ the filesystem/git state, and freshness findings also depend on the date.
 Exit code: 0 assembled (warnings included); 1 incomplete because of read, Git or
 shape errors, or no meta. Partial output remains available, including in JSON.
 `,
+	"dream": `omut dream [project] [--apply] [--json]
+
+Prints what the dream agent needs to consolidate this memory: the records
+written since the last dream, what check found, and the dream contract.
+Changes nothing: the CLI never executes an agent and never writes meta.
+Launching the dream is a recipe, like the hooks in docs/hooks.md:
+
+  omut dream | claude -p "Follow the dream contract."
+
+The digest is the floor, not the ceiling: the agent re-reads the whole memory,
+compares it with reality and reports what it would change in at most 15 lines.
+With --apply the printed contract says the human has already approved: the
+agent applies the changes, sets dreamed: in the brief and records the dream.
+The flag changes the printed words only.
+
+Which memory:
+  in a project of a pack   that project, at any depth
+  at a pack's root         the pack's own memory (brief, decisions, graveyard);
+                           projects dream separately: omut dream <project>
+  outside a pack           the project of the directory given or the current one
+
+When it is due (the startup hook says so with one line):
+  volume, not the calendar: dated log entries (log.md and log-archive/),
+  thread updates and dated decisions strictly after dreamed: are counted; at
+  dream: records (default 10) the agent is asked to offer a dream to the
+  human. The nag goes away when the dream agent writes dreamed: <date>.
+
+--json emits one object: scope, root, as_of, mode (report or apply), dreamed,
+threshold, records (kind, date, file, line, text), findings, problems,
+contract and incomplete. Paths are relative to root. A read or shape error
+marks the report incomplete.
+
+Exit code: 0 assembled; 1 incomplete because of read or shape errors, or no
+meta. Partial output remains available, including in JSON.
+`,
+
 	"zero": `omut zero [project] [--by agent/model]
 
 Repairs the scaffold and brings the tool files to this version: this is how a
@@ -323,7 +362,7 @@ Refuses:
 Exit code: 0 removed; 1 refused, with the reason on stderr.
 `,
 
-	"hook": `omut hook start|commit [--agent claude|codex|cursor] [--strict]
+	"hook": `omut hook start|commit [--agent claude|codex|cursor] [--strict] [--preview]
 
 For agents' and git's hooks, not called by hand. Only reads. Says nothing and
 exits 0 where there is no meta, so it is safe to install globally. omut installs
@@ -333,10 +372,16 @@ meta in the main checkout and gives the agent the full path.
   start    at an agent's session start: prints the brief, this copy's memory,
            explicit project/local work plans (without following cards),
            decisions waiting for the human, unfinished threads, what check
-           found, claims due for checking, and work newer than the log that no
-           commit holds. In a pack root: tells the agent it is the lead and
-           includes the same assembled overview as omut context, with sources,
-           local Git observations, findings and incomplete-context notices.
+           found, claims due for checking, work newer than the log that no
+           commit holds, and — when the memory grew past the brief's dream:
+           threshold since dreamed: — one line asking the agent to offer a
+           dream (omut help dream). In a pack root: tells the agent it is the
+           lead and includes the same assembled overview as omut context, with
+           sources, local Git observations, findings and incomplete-context
+           notices.
+  preview  with start: prints what a session would get, without an agent
+           payload. How a human sees what the agent sees, and how a silent
+           hook is debugged.
   commit   as git's pre-commit: reminds on stderr when staged work is newer than
            .omut/log.md; blocks a commit carrying meta with shape errors.
 
@@ -366,7 +411,7 @@ type checkRule struct{ code, level, when string }
 
 var checkRules = []checkRule{
 	{"no-meta", "error", `a directory of the pack without .omut/ (hidden and ignore: aside)`},
-	{"shape", "error", `a missing field or section, a wrong status, a repeated Dn, a broken link; an invalid or unreadable plan pointer`},
+	{"shape", "error", `a missing field or section, a wrong status, a repeated Dn, a broken link, a malformed dreamed/dream value; an invalid or unreadable plan pointer`},
 	{"scaffold", "error", `the pack root lacks a tool or meta file; zero fixes it`},
 	{"local-in-git", "error", `git tracks files of .omut/local/`},
 	{"size", "warn", `brief over 60 lines / 6000 Unicode characters, a thread or selected plan over 80 / 8000; log over 50 entries`},

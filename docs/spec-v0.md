@@ -114,6 +114,8 @@ verified: 2026-10-31        # when "Where it lives" and "Now" were checked again
 by: claude-code/opus-5.5
 adr: docs/adr               # optional: where the project's ADRs are
 plan: docs/work-plan.md     # optional: work plan, relative to project root
+dreamed: 2026-11-10         # optional: when the memory was last consolidated
+dream: 15                   # optional: records that make the next dream due, default 10
 ---
 ## Why
 The original intent, 1–3 lines. Never rewritten after the fact: a changed intent is a decision in decisions.md.
@@ -134,6 +136,8 @@ A shortlist, 3–7 items. Small ideas live here too. With a work plan, point to 
 ```
 
 Headings, field names and labels are fixed because `check` looks for them. The text itself is written in whatever language the project's people use.
+
+**Dreamed and dream (optional).** The memory is consolidated by volume, not by the calendar. `dreamed:` is when a dream agent last consolidated it; `dream:` is how many new records make the next one due — dated log entries in `log.md` and `log-archive/`, thread `updated` dates and dated decisions strictly after `dreamed:`; 10 when unset. At or over the threshold, `hook start` adds one line asking the agent to offer a dream to the human; a memory never dreamed counts all of its records and stays quiet while they are below the threshold. `omut dream` prints those records, the check findings and the contract the dream agent follows: read the whole memory, not only the digest, verify against reality, report what would change in at most 15 lines, change nothing until the human approves; `--apply` changes the contract's words to "already approved", and the agent writes everything — including `dreamed:`. The CLI never executes an agent and never writes meta; launching is a recipe (docs/dream.md). A malformed or non-positive value is a shape error; a frozen project gets no reminder.
 
 ### local/: the instance layer, never in git
 
@@ -271,8 +275,9 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | `kill <name> --yes --reason "..."` | Removes the project directory and writes a tombstone (the reason is required; "what it was" comes from "Why"). Without `--force`, refuses when there are uncommitted changes, gitignored files that no build recreates (`.env`, local data, meta kept out of git; caches such as `node_modules/`, `target/`, `.venv/` don't count), or commits that are on no remote, and always for a project without git: there is no copy anywhere. A symlinked project loses only the link. Prints where the project is mentioned in other projects' meta; fixing those mentions is the agent's job. |
 | `check [name]` | A report that changes nothing (rules in section 8). Without a name: in a project of a pack, at any depth, that project; at the root, the whole pack (from a project, `..` names it); outside a pack, the project you are in at any depth or from a linked worktree, if it has `.omut/`. `--json` for agents and automation. Exits non-zero on shape errors; `--fail-on warn` on warnings too, for CI and its badge. |
 | `context [name] [--json]` | Assemble the pack overview or a project's current records, with sources and existing check findings (§6.1). Same scope rules as `check`, including `..`, deep subdirectories and worktrees. No model, writes or claim execution. Exit 1 for read/shape errors with partial output retained; warnings alone exit 0. |
+| `dream [name] [--apply] [--json]` | The dream digest: records newer than `dreamed:`, check findings, and the contract the dream agent follows (§5). Read-only: it never executes an agent and never writes meta; `--apply` changes the printed contract to "already approved". Same scope rules as `check`, including `..` and worktrees; at a pack root it dreams the pack's own memory. Exit 1 for read/shape errors with partial output retained. Launching is a recipe: docs/dream.md. |
 | `zero [name]` | Repairs the scaffold: updates the tool files to the current template, creates missing files from templates, fixes the pointer block. Never touches meta files; only lists their shape errors. Without a name: in a project of a pack, at any depth, that project, if it has `.omut/`; at the root, the root (from a project, `..` names it); outside a pack, the project you are in at any depth or from a linked worktree. In a linked worktree with committed meta it doesn't create `local/`. Removes tool files of earlier versions (the root's `conventions.md`). In a private project the block goes into `CLAUDE.local.md` unless `AGENTS.md` has it already, and no `CLAUDE.md` link is made. This is also how a pack is updated after a new release. |
-| `hook start\|commit` | For hooks, never called by hand: `start` prints the context a session starts from (brief, decisions waiting, unfinished threads, findings, and work newer than the last log write that no commit holds). At a pack root, it supplies the same deterministic overview as `context` (§6.1), plus lead instructions. `commit` is a git pre-commit check (a reminder when staged work is newer than the log, a block when the commit carries meta with shape errors; `--strict` also blocks work without a log entry). `--agent claude\|codex\|cursor` reads that agent's payload and answers in its format. Silent outside any meta. Recipes: [`hooks.md`](hooks.md). |
+| `hook start\|commit` | For hooks, never called by hand: `start` prints the context a session starts from (brief, decisions waiting, unfinished threads, findings, and work newer than the last log write that no commit holds), plus one dream line when the brief's `dream:` threshold is met (§5). At a pack root, it supplies the same deterministic overview as `context` (§6.1), plus lead instructions. `start --preview` prints what a session would get, without an agent payload. `commit` is a git pre-commit check (a reminder when staged work is newer than the log, a block when the commit carries meta with shape errors; `--strict` also blocks work without a log entry). `--agent claude\|codex\|cursor` reads that agent's payload and answers in its format. Silent outside any meta. Recipes: [`hooks.md`](hooks.md). |
 | `help [command\|meta]` | Without an argument, the overview. `help <command>` (the same as `<command> --help` or `-h`, which win over anything else on the line) says what the command writes, what it leaves alone, when it refuses, its flags and exit codes: enough to decide without trying it in a scratch repository. The flags come from their definitions, and tests compare the rest with the commands and the `check` rules with section 8. `help meta` prints the rules a project would get as `.omut/README.md`, before anything is laid down. |
 
 `freeze`, `thaw` and `start` on an existing directory are the only places where the CLI touches meta files. They change the single `status` field or create missing templates.
@@ -282,7 +287,7 @@ All are non-interactive, so an agent can call them. Destructive operations need 
 | Code | Level | Condition |
 |---|---|---|
 | `no-meta` | error | a root subdirectory without `.omut/` (except `ignore` and hidden ones) |
-| `shape` | error | a missing required frontmatter field or section, a wrong status, a repeated Dn, a broken link; an explicit plan pointer is invalid, outside its layer, unreadable or not a regular Markdown file |
+| `shape` | error | a missing required frontmatter field or section, a wrong status, a repeated Dn, a broken link, a malformed or non-positive `dreamed:`/`dream:` value (§5); an explicit plan pointer is invalid, outside its layer, unreadable or not a regular Markdown file |
 | `size` | warn | `brief.md` > 60 lines or 6000 Unicode characters, a thread or selected plan > 80 lines or 8000 Unicode characters; `log.md` > 50 entries (time to rotate). Count the complete normalized markdown, including frontmatter and comments, excluding the final newline; characters are Unicode code points, not UTF-8 bytes or model tokens |
 | `stale-brief` | warn | the project has changes newer than `updated`, `.omut/` aside. With git: the last commit that touched anything outside `.omut/`, plus the mtimes of changed and untracked files (a fresh clone is not a change). Without git: the mtime of files outside hidden directories. A symlinked project is followed to its target |
 | `unverified` | warn | an active project whose `verified` is empty or older than 30 days |
@@ -314,6 +319,7 @@ The rituals are written in the tool files. Any agent carries them out.
 - **A piece of work is done, or parked.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md`, before telling the human the work is done and before a commit; what changed only in this copy goes to `local/`. Not "at session end": no agent sees it. The result must be checkable: what was done, what was verified and how, what was not, the next step.
 - **Moving the project.** The meta moves with the directory; what breaks is outside it (symlinks into it, absolute paths in agents' settings, virtualenvs, agents' memory kept by path, cron). Go through "Where it lives", search for the old path, record the move.
 - **Checking a claim.** Run its `how`, compare, update `seen`; a mismatch goes to the human. Note what was seen in `local/log.md`.
+- **Dreaming.** On the startup hook's reminder or the human's request: run `omut dream` and follow its contract — read the whole memory, verify against reality, consolidate, report in at most 15 lines. Nothing changes without the human's approval; after it, the changes, `dreamed: <today>` and the log line. The lead dreams the pack's own memory the same way.
 - **Looking for the footprint** when adopting or moving, or to confirm "nothing else runs": search the places footprints hide (agents' skills, MCP configs, agents' settings and memory, tool installs, cron and launchd/systemd, containers, shell profiles); the list is in `.omut/README.md`.
 - **Freezing.** A final "Now", a log line, check "Where it lives", then `freeze`.
 
@@ -343,7 +349,7 @@ The rituals are written in the tool files. Any agent carries them out.
 ## 12. Open questions
 
 1. **Finished threads** (`done`/`dropped`): fold the substance into decisions and the log and delete the file, or keep `threads/archive/`. For now the files stay.
-2. **`check` thresholds** are fixed (60/80 lines and 6000/8000 Unicode characters, 30/14 days, 50 entries). Overrides if they turn out to be needed.
+2. **`check` thresholds** are fixed (60/80 lines and 6000/8000 Unicode characters, 30/14 days, 50 entries). The dream threshold is the project's own (`dream:`, default 10). Overrides if they turn out to be needed.
 3. **`kill --keep-files`.** Not for now: a symlinked project is removed without its files anyway.
 4. **Codex and `AGENTS.md` above the git root:** check by hand.
 5. **Migrating from drift:** a one-off script, not a command.

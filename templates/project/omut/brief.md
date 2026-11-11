@@ -4,6 +4,7 @@ updated: {{date}}
 verified:
 by: {{by}}
 # Optional: plan: docs/work-plan.md (relative to the project root)
+# Optional: dreamed: YYYY-MM-DD (the last dream), dream: N (records before the sleep reminder; default 10)
 ---
 ## Why
 <!-- The original intent, 1–3 lines. If you don't know, say so and ask the human. -->

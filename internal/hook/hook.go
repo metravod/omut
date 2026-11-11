@@ -14,6 +14,7 @@ import (
 
 	"github.com/metravod/omut/internal/check"
 	"github.com/metravod/omut/internal/context"
+	"github.com/metravod/omut/internal/dream"
 	"github.com/metravod/omut/internal/meta"
 	"github.com/metravod/omut/internal/pack"
 )
@@ -38,7 +39,28 @@ func startPack(root string) string {
 	b.WriteString("You were started in a pack root, so you are the lead: read `.omut/LEAD.md` before anything else.\n")
 	b.WriteString("The pack overview is assembled below; do not reread those sources just to assemble it again. Use `omut context <project>` when you need the full current project records.\n\n")
 	b.WriteString(context.ForPack(&pack.Pack{Root: root}, check.Options{}).Markdown())
+	writeDreamReminder(&b, root)
 	return b.String()
+}
+
+// writeDreamReminder adds one line when the memory grew past the brief's
+// threshold since the last dream: consolidation is due by volume, not by the
+// calendar, and the nag extinguishes when the dream agent writes dreamed:.
+// Nothing for a frozen project, whose memory is not growing.
+func writeDreamReminder(b *strings.Builder, dir string) {
+	if brief, err := meta.Read(filepath.Join(dir, pack.MetaDir, pack.Brief)); err != nil || brief.Front["status"] == "frozen" {
+		return
+	}
+	count, _ := dream.CountDir(dir)
+	if !count.Due() {
+		return
+	}
+	since := "the memory has never been recorded as dreamed"
+	if count.Dreamed != "" {
+		since = fmt.Sprintf("the last dream was recorded %s", count.Dreamed)
+	}
+	fmt.Fprintf(b, "\n## Memory wants a dream\n\n%d records are newer than %s; the threshold is %d (`dream:` in the brief, %d when unset). Tell the human the memory wants consolidating, and offer it; on their approval run `omut dream` and follow its contract.\n",
+		count.Total(), since, count.Threshold, dream.DefaultThreshold)
 }
 
 func startProject(pl pack.Place) string {
@@ -52,13 +74,9 @@ func startProject(pl pack.Place) string {
 	if pack.Private(dir) {
 		b.WriteString("\nThe meta is this copy's only: git ignores `.omut/` (`omut start --private`), and it stays out of commits. Don't `git add -f` it.\n")
 	}
-	work := dir
-	if pl.Worktree != "" {
-		work = pl.Worktree
-	}
-	writeUnrecorded(&b, work, dir)
-	writeFindings(&b, check.Dir(dir, check.Options{}), false)
-
+	// Stable first, volatile last: what the memory holds changes rarely and
+	// legitimately; what this run observes (mtimes, findings, counts) would
+	// break an inference prefix cache if it came first.
 	if text, err := os.ReadFile(filepath.Join(lead, pack.Brief)); err == nil {
 		b.WriteString("\n## .omut/brief.md\n\n")
 		b.WriteString(strings.TrimRight(string(text), "\n") + "\n")
@@ -116,7 +134,14 @@ func startProject(pl pack.Place) string {
 		b.WriteString("\n## Unfinished threads\n\n")
 		b.WriteString(strings.Join(open, "\n") + "\n")
 	}
+	work := dir
+	if pl.Worktree != "" {
+		work = pl.Worktree
+	}
+	writeUnrecorded(&b, work, dir)
+	writeFindings(&b, check.Dir(dir, check.Options{}), false)
 	writeDue(&b, dir, pl.Instance)
+	writeDreamReminder(&b, dir)
 	return b.String()
 }
 
