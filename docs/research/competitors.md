@@ -2,6 +2,8 @@
 
 A snapshot as of 2026-11-01. The repositories were read from source (shallow clones), not just from their descriptions.
 
+2026-11-07 addendum: Memorilla reviewed through its README, paper abstract, evaluation guide and `memorilla/memory.py` / `memorilla/vllm.py` via GitHub. No model execution or independent benchmark replication.
+
 ## Summary
 
 | Project | Level | What it stores | What holds it together | Truth checking | Pack of projects |
@@ -16,6 +18,7 @@ A snapshot as of 2026-11-01. The repositories were read from source (shallow clo
 | **Pensieve** (~2.5k ⭐) | one repo | 4 layers in `.pensieve/`: maxims (MUST), decisions (WANT), pipelines (HOW), knowledge (IS) + `short-term/` with a TTL; a graph of `[[...]]` links | a skill + ~5k lines of bash/Python, Claude Code hooks, writes into auto memory | no: `doctor` checks frontmatter, links and layout; a decision has an "invalidation condition", but nothing checks it | no; only the system code is shared |
 | **beads** (`bd`) | tasks | a task graph (now on Dolt) | a CLI | no | no |
 | **Claude Code auto memory / Tasks** | agent | notes and tasks in `~/.claude` | built in | no | no; tied to the machine and the vendor |
+| **Memorilla** (reviewed 2026-11-07) | model input / document collection | source documents encoded as embeddings, query-conditioned latent memory vectors | trained memory module + encoder + compatible frozen decoder; published CUDA/Python implementation | evaluated for answer/task performance; no project-record freshness workflow in reviewed interface | no project-pack workflow in reviewed interface |
 
 ## Each one: what we take and what we avoid
 
@@ -97,6 +100,20 @@ A Hub that starts and stops services, manifests, a shared cache, "loop engineeri
 **We avoid:**
 - **A platform that has to be run.** Our "Where it lives" is a record the agent checks against reality, not a control panel.
 
+## Memorilla addendum (2026-11-07)
+
+[Memorilla](https://github.com/snap-stanford/memorilla) shares the broad goal of using accumulated information beyond the current conversation. Its [paper](https://arxiv.org/abs/2610.21375) describes reusable document embeddings and a learned module that produces a fixed number of query-dependent vectors in the frozen LLM's input embedding space. The default is 16 memory slots; these are continuous vectors, not sixteen readable words or a portable summary.
+
+The distinction is visible in the implementation: [`MemoryModule.forward`](https://github.com/snap-stanford/memorilla/blob/main/memorilla/memory.py) projects into the decoder embedding dimension; [`MemoryVLLM.generate`](https://github.com/snap-stanford/memorilla/blob/main/memorilla/vllm.py) inserts those vectors into prompt embeddings. The [evaluation guide](https://github.com/snap-stanford/memorilla/blob/main/docs/evaluation.md) requires the decoder used to train the checkpoint; released checkpoints use Qwen3-8B. Thus this published mechanism is not a memory file one can transfer unchanged between Claude Code and Codex through their ordinary text interfaces.
+
+omut's artifact is explicit project state: intent, decisions with reasons, unfinished work, verification records and next steps, maintained by agents and readable by people. Its CLI scaffolds, checks shape/recorded freshness and assembles literal records; it does not learn to compress source history. Memorilla supplies a mechanism for querying a document collection, without defining this project's record-keeping contract in the reviewed interface.
+
+**Real overlap:** reducing the cost of recovering useful context from accumulated history. A sufficiently capable automatic memory system could substitute for some manual project-memory work; different implementation layers alone do not eliminate competition for that need.
+
+**Potential complement, not implemented:** omut records could be source documents for a compatible inference system. This would require integration and validation; it is not a current feature or a reason to add GPU/model dependencies to the CLI.
+
+**Positioning implication:** describe portable project memory, reasons for decisions and continuation across agents, rather than claiming that omut invented AI memory or provides neural compression/token savings. No comparative quality or efficiency claim follows from either project's reported experiments.
+
 ## Positioning
 
 Every one of our pieces exists somewhere already. The combination is what's new:
@@ -118,3 +135,4 @@ Every one of our pieces exists somewhere already. The combination is what's new:
 - https://github.com/kingkongshot/Pensieve
 - https://github.com/gastownhall/beads
 - https://github.com/snowtema/drift
+- https://github.com/snap-stanford/memorilla

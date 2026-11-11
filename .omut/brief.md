@@ -14,6 +14,8 @@ A Go CLI with no dependencies. Agents keep project memory as markdown; the CLI l
 GitHub: github.com/metravod/omut (public, 2026-11-01). CI and scheduled meta checks: `.github/workflows/ci.yml` and `omut.yml`. Tagged releases use `release.yml`, `macos.yml` and goreleaser; packages go to metravod/homebrew-tap. Install options: README.md. Nothing runs as a service. This copy: local/instance.md.
 
 ## Now
+- Memorilla comparison added: overlap in recovering accumulated context, different published interface (model-specific latent vectors versus portable project records); no benchmark replication or integration → docs/research/competitors.md.
+- First Russian Threads introduction drafted: a handoff story, a memory example as the image and copyable setup in a reply; image and publication remain future work → threads/threads-introduction.md.
 - Standalone projects and optional packs work; `start --private` keeps memory out of git. Shared meta follows branches; private meta and `local/` belong to the main checkout and are found from worktrees.
 - Agents own content and verification. Rules travel in `.omut/README.md`; hooks provide startup context and commit reminders. Existing ADRs remain their decision registry. Decisions D11–D18 explain these choices.
 - Memory budgets (6000/8000 Unicode characters), compact current-state memory and clearer onboarding/check claims are in place (D19). Native Codex private startup and controlled task continuation work after hook trust/setup → docs/handoff.md, threads/prelaunch-evidence.md.
