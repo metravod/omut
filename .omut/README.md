@@ -24,6 +24,8 @@ Size budgets count the whole file, including frontmatter and comments, after nor
 
 Headings, field names and labels stay as below: `check` looks for them. Write the text itself in the language the project's people use.
 
+A fact is a fact at a moment. Date what can rot: releases, versions, states, "now runs X" — a bare `· 2026-11-01` or "as of 2026-11" after the statement is enough. The dream (below) keeps the dates honest.
+
 ### Two layers
 
 - **The project layer** (`brief.md`, `decisions.md`, `threads/`, `log.md`) goes into git and to everyone who clones the repository: why, what, decisions, the work, and the public footprint (the repository, releases, packages, public sites).
@@ -38,7 +40,7 @@ The test for a fact: would a stranger who clones the repository need it, and is 
 ### Files
 
 **`brief.md`: the project's brief. Always read, at most 60 lines and 6000 Unicode characters.**
-Frontmatter: `status` (`active` | `frozen`), `updated` (when the text changed), `verified` (when "Where it lives" and "Now" were last checked against reality), `by` (`agent/model`, the tool that writes and its model, such as `claude-code/opus-5.5`), optional `adr` (the project's ADR directory), optional `plan` (a Markdown work plan, relative to the project root).
+Frontmatter: `status` (`active` | `frozen`), `updated` (when the text changed), `verified` (when "Where it lives" and "Now" were last checked against reality), `by` (`agent/model`, the tool that writes and its model, such as `claude-code/opus-5.5`), optional `adr` (the project's ADR directory), optional `plan` (a Markdown work plan, relative to the project root), optional `dreamed` (when the memory was last consolidated) and `dream` (the records that make the next dream due, default 10).
 Sections, all required:
 - **Why**: the original intent, 1–3 lines. Never rewritten after the fact: a changed intent is a decision in `decisions.md`.
 - **What it is**: how it works, 3–10 lines, for a human. Links to the project's key documents.
@@ -95,6 +97,7 @@ One or two lines per session, details by link to a thread or a decision. The aut
 
 - **Session start.** Read `brief.md`, explicitly selected plans, the `active` and `parked` threads, the `open` and `doubted` decisions. If a thread says "Verified", rerun that check before continuing.
 - **Checking a claim.** Run its `how` (ask the human first where it touches servers or anything outside this directory) and compare with the claim. It holds: set `seen` to today. It doesn't: tell the human and fix the line with them, never silently. Note in `local/log.md` what you saw, not just "checked".
+- **A dream reminder.** When the startup hook says the memory wants a dream, tell the human and offer it. On approval, run `omut dream` and follow its contract: read the whole memory, not only the digest, verify against reality, consolidate, and report in at most 15 lines. Change nothing without the human's approval; with it (`omut dream --apply`), make the changes, set `dreamed: <today>` in the brief and add the log line.
 - **Looking for the footprint** (adopting, moving, "is anything else running?"). Search for the project's path and name where footprints hide: agents' skills (`~/.claude/skills`, `~/.codex/skills`, `~/.agents/skills`), MCP configs (`~/.claude.json`, `.mcp.json`, `~/.codex/config.toml`, `~/.cursor/mcp.json`), agents' settings and memory kept by path (`~/.claude/settings.json`, `~/.claude/projects/`), binaries and tool installs (`~/.local/bin`, `uv tool list`, `pipx list`, `brew list`, `npm ls -g`), services and schedules (`crontab -l`, `~/Library/LaunchAgents`, `systemctl --user list-units`), containers (`docker ps -a`, compose files), shell profiles (aliases, `PATH`). Anything found that is not written down goes to `local/instance.md`, or to the human.
 - **A decision is made.** An ADR, if the project keeps them; a line in `decisions.md` otherwise.
 - **A piece of work is done, or parked.** Update the thread (create it if there is none), "Now" in `brief.md`, a line in `log.md` (more work the same session extends that line); what changed in this copy only (a deploy, a move, an install) goes to `local/instance.md` and `local/log.md`. Do it before you tell the human the work is done, and before a commit: an agent doesn't see the session end, so waiting for it means never. The result must be checkable: what was done, what was verified and how, what was not verified, the next step.

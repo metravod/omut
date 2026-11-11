@@ -1,6 +1,6 @@
 ---
 status: active
-updated: 2026-11-06
+updated: 2026-11-11
 verified: 2026-11-06
 by: codex/GPT-6
 ---
@@ -14,6 +14,7 @@ A Go CLI with no dependencies. Agents keep project memory as markdown; the CLI l
 GitHub: github.com/metravod/omut (public, 2026-11-01). CI and scheduled meta checks: `.github/workflows/ci.yml` and `omut.yml`. Tagged releases use `release.yml`, `macos.yml` and goreleaser; packages go to metravod/homebrew-tap. Install options: README.md. Nothing runs as a service. This copy: local/instance.md.
 
 ## Now
+- Memory dreaming (D25): `omut dream` prints the consolidation digest and the dream contract; the startup hook reminds by volume (`dreamed:`/`dream:` in the brief, default 10 records); `hook start --preview`; text output goes stable-first, volatile-last. Launch recipes: docs/dream.md → threads/release-v0.11.0.md.
 - Memorilla comparison added: overlap in recovering accumulated context, different published interface (model-specific latent vectors versus portable project records); no benchmark replication or integration → docs/research/competitors.md.
 - First Russian Threads introduction drafted: a handoff story, a memory example as the image and copyable setup in a reply; image and publication remain future work → threads/threads-introduction.md.
 - Standalone projects and optional packs work; `start --private` keeps memory out of git. Shared meta follows branches; private meta and `local/` belong to the main checkout and are found from worktrees.
@@ -23,7 +24,7 @@ GitHub: github.com/metravod/omut (public, 2026-11-01). CI and scheduled meta che
 - Released v0.10.0 (2026-11-06) → threads/release-v0.10.0.md. `omut context [project] [--json]` assembles recorded meta and separate local Git observations, with explicit selection/failures; pack startup supplies the same overview (D21–D22). Lead guidance uses the overview and reserves specific diffs for questions/discrepancies. Provenance, scoped private worktrees and index/fsmonitor behavior tested → threads/context.md, threads/context-git.md.
 - Optional work plans (D23): `plan:` in the brief selects a project index; the same field in local/instance.md selects a local package. Context/startup include literal plans with source locations; checks cover paths/readability and 80-line/8000-character size. Rules describe goals, task ownership, dependencies and acceptance without duplicating state. Existing active packages were not migrated → threads/work-planning.md.
 **Verified:** v0.10.0 main CI, macOS release gate, six archives/checksums, Homebrew metadata, checksum-verified installer and released plan/privacy/read-only smoke → threads/release-v0.10.0.md. go vet ./... and go test ./... pass; size regressions include Cyrillic and LF/CRLF. Native private Codex startup/continuation, worktree recovery and safe opt-out → docs/handoff.md, docs/research/hn-prelaunch-review.md. Earlier release/live-check history → log-archive/brief-before-prelaunch-2026-11-05.md.
-**Not verified:** cross-provider or comparative task-quality gains, context token savings or a fresh lead using the new overview, actual crash recovery, Codex resume/compact/fork, Cursor hooks, D18's memory question during a real adoption, a fresh agent deciding from help alone, the badge on another repository, and performance on a large pack.
+**Not verified:** a real dream run by an agent, cross-provider or comparative task-quality gains, context token savings or a fresh lead using the new overview, actual crash recovery, Codex resume/compact/fork, Cursor hooks, D18's memory question during a real adoption, a fresh agent deciding from help alone, the badge on another repository, and performance on a large pack.
 
 ## Next
 1. Publish the prepared introduction and gather outside attempts; worked case → docs/handoff.md.
