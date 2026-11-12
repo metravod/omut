@@ -42,7 +42,8 @@ Commands:
   init [dir]                     create a pack: a root for several projects
   kill <project> --yes --reason "..."
                                  remove a project of a pack, write a tombstone
-  hook start|commit              for agents' and git's hooks, not called by hand
+  hook start|commit              agents' and git's hooks; when none is wired,
+                                 an agent may run start itself
   version                        print the version
 
 More:
@@ -364,10 +365,11 @@ Exit code: 0 removed; 1 refused, with the reason on stderr.
 
 	"hook": `omut hook start|commit [--agent claude|codex|cursor] [--strict] [--preview]
 
-For agents' and git's hooks, not called by hand. Only reads. Says nothing and
-exits 0 where there is no meta, so it is safe to install globally. omut installs
-no hook itself: those files are yours. In a linked worktree it finds the clone's
-meta in the main checkout and gives the agent the full path.
+For agents' and git's hooks. When no hook is wired, an agent may run start
+itself at session start, as the pointer block tells it. Only reads. Says
+nothing and exits 0 where there is no meta, so it is safe to install globally.
+omut installs no hook itself: those files are yours. In a linked worktree it
+finds the clone's meta in the main checkout and gives the agent the full path.
 
   start    at an agent's session start: prints the brief, this copy's footprint
            (Access and Runbook stay in the file behind a pointer), explicit

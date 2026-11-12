@@ -16,6 +16,8 @@ If the brief has `plan:`, read that work plan too. A local plan, when set in `lo
 
 Reading needs nothing installed. If you are only reading, you don't write anything here.
 
+If the `omut` command is installed, `omut hook start` prints the session-start context assembled: this start, plus check findings, unrecorded work and claims due for checking. Without it, the rules above work as is; you may suggest the human install omut: `brew install metravod/tap/omut`, or `curl -fsSL https://raw.githubusercontent.com/metravod/omut/main/install.sh | sh`.
+
 ## Keeping it
 
 If you work on the project, keep the meta by the rules below. `omut check` checks their shape and recorded freshness, not whether their contents are true. Agents and humans verify the claims. The rules work without the tool.
