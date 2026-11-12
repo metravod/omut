@@ -6,7 +6,7 @@ Project memory that any agent can read, keep and check. A few plain markdown fil
 
 > *Omut pamyati* is the Russian name of Dumbledore's Pensieve: you dip into someone's memories and see how it really was.
 
-Status: v0.8, early and used daily on a real pack of projects. Questions and stories of how it went: [Discussions](https://github.com/metravod/omut/discussions).
+Status: v0.11, early and used daily on a real pack of projects. Questions and stories of how it went: [Discussions](https://github.com/metravod/omut/discussions).
 
 ## Why
 
@@ -145,6 +145,7 @@ The overview omits project footprints, local memory, logs and decided project re
 | `kill <project> --yes --reason "..."` | remove, write a tombstone, list the mentions; refuses over unsaved work |
 | `check [project] [--json] [--fail-on warn]` | the report; non-zero exit on shape errors |
 | `context [project] [--json]` | assembled pack overview or full current project records, with sources |
+| `dream [project] [--apply] [--json]` | the consolidation digest and the dream contract for the dream agent ([recipes](docs/dream.md)) |
 | `zero [project]` | repair the scaffold, update the tool files |
 | `hook start\|commit` | session context for agents, a git pre-commit reminder ([recipes](docs/hooks.md)) |
 
@@ -180,6 +181,7 @@ Binaries for macOS, Linux and Windows are on the [releases page](https://github.
 - `omut help <command>`: what a command writes, leaves alone and refuses, right in the terminal. `omut help meta`: the rules of the meta, before anything is laid down.
 - [Specification v0](docs/spec-v0.md)
 - [Hooks for git, CI, Claude Code, Codex, Cursor, and the badge](docs/hooks.md)
+- [The dream: consolidating the memory by hand or on a schedule](docs/dream.md)
 - [Competitors and neighbours](docs/research/competitors.md)
 - [Checking the meta against reality: the variants weighed](docs/research/reality-check.md)
 
